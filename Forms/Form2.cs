@@ -1,5 +1,4 @@
 ﻿
-using OLAPlug;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.Diagnostics;

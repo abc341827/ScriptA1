@@ -45,12 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="OLAPlug-beta64_x64.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="inference\**\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>

@@ -1,5 +1,4 @@
 using NAudio.MediaFoundation;
-using OLAPlug;
 using OpenCvSharp.Flann;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,7 +11,6 @@ namespace WinFormsApp1
     {
         // 保存/加载应用状态的文件名（存放在 %AppData%/WinFormsApp1/appstate.json）
         private static readonly string _stateFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinFormsApp1", "appstate.json");
-        private OLAPlugServer? OlaServer = null;
         private class AppState
         {
             public string Combo1 { get; set; }
@@ -97,22 +95,6 @@ namespace WinFormsApp1
 
             // 尝试加载上次保存的状态（组合框和列表项）
             LoadAppState();
-            Task.Run(() =>
-            {
-                var olaServer = new OLAPlugServer();
-
-                if (olaServer.OLAObject == 0)
-                {
-                    throw new Exception("创建插件接口对象失败 (CreateCOLAPlugInterFace)。");
-                }
-
-                int regResult = olaServer.Reg(olaServer.UserCode, olaServer.SoftCode, olaServer.FeatureList);
-
-                // 将 OLA 实例传给全局 InputSimulator，使其可以优先使用 OLA 模拟输入
-                OlaServer = olaServer;
-
-                OlaServer.SetConfig("{\"WorkPath\":\"\",\"DbPath\":\"\",\"DbPassword\":\"\",\"InputLock\":false,\"EnableRealKeypad\":false,\"KeyDownInterval\":50,\"MouseClickInterval\":50,\"MouseDoubleClickInterval\":200,\"VncServer\":\"127.0.0.1\",\"VncPort\":\"5900\",\"VncPassword\":\"\",\"SimModeType\":1,\"UseAbsoluteMove\":true,\"EnableRealMouse\":true,\"RealMouseMode\":1,\"MinMouseTrajectory\":50,\"RealMouseBaseTimePer100Pixels\":100,\"RealMouseFlowFlag\":161,\"RealMouseNoise\":5.0,\"RealMouseDeviation\":5,\"RealMouseMinSteps\":300,\"RealMouseTimeToSteps\":2.5,\"RealMouseOvershoots\":0,\"MouseDriftCheckTime\":0,\"MaxOverlap\":0.5,\"MatchColorWeight\":0.7,\"CheckDisplayDeadInterval\":50,\"KeyboardHwnd\":23727762,\"MouseHwnd\":23727762}");
-            });
         }
 
         private void Form1_FormClosed(object? sender, FormClosedEventArgs e)
@@ -393,42 +375,6 @@ namespace WinFormsApp1
             }
         }
 
-        private void button9_Click(object sender, EventArgs e)
-        {
-            var bindResult = OlaServer?.GetBindWindow();
-            if (bindResult != 0)
-            {
-                OlaServer?.UnBindWindow();
-            }
-            else
-            {
-                OlaServer?.BindWindow(temphandle, "dxgi", "dx.mouse.clip.lock.api", "windows", 0);
-            }
-            #region 注入C++DLL的方式
-            //Win32API.GetWindowThreadProcessId(temphandle, out uint processid);
-            //int pid = (int)processid;
-            //if (pid == 0)
-            //{
-            //    return;
-            //}
-
-            //string dllFullPath = @"D:\Project\MXDWndProc\x64\Debug\MXDWndProc.dll"; // 改为实际路径
-
-            //if (Injector.InjectDLL(pid, dllFullPath))
-            //{
-            //    if (Injector.CallRemoteFunction(pid, dllFullPath, "SetGameWindow", new IntPtr(temphandle)))
-            //    {
-            //        MessageBox.Show("窗口句柄已传递给 DLL");
-            //        Injector.CallRemoteFunction(pid, dllFullPath, "InstallHook", 0);
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("调用失败");
-            //    }
-            //    MessageBox.Show("注入成功！按任意键卸载...");
-            //}
-            #endregion
-        }
         private int x = 0;
         private int y = 0;
         // 窗体鼠标点击事件
@@ -469,7 +415,6 @@ namespace WinFormsApp1
                         //    return;
                         //}
 
-                        // Use InputSimulator.KeyPress which will prefer OLA if available
                         Thread.Sleep(2000);
                         WindowMessageSimulator.SendKeyPress(temphandle, Keys.Left);
                     }
@@ -479,18 +424,6 @@ namespace WinFormsApp1
                     }
                 });
             }
-
-
-            //Task.Run(() =>
-            //{
-            //    int a = 0;
-            //    while (a < 20)
-            //    {
-            //        olaServer.KeyPress((int)'A');
-            //        Thread.Sleep(200);
-            //        a++;
-            //    }
-            //});
 
             #region 调用取消钩子
             //Win32API.GetWindowThreadProcessId(temphandle, out uint processid);

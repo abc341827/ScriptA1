@@ -1,5 +1,4 @@
-﻿using OLAPlug;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -18,59 +17,26 @@ namespace WinFormsApp1
         /// <summary>
         /// 移动鼠标到绝对坐标
         /// </summary>
-        public static void MouseMove(int x, int y, OLAPlugServer? OlaServer = null, bool AbsPoint = false)
+        public static void MouseMove(int x, int y, bool AbsPoint = false)
         {
-
-            if (OlaServer != null)
-            {
-                if (AbsPoint)
-                {
-                    x -= windowRec.Left;
-                    y -= windowRec.Top;
-                }
-                GetCursorPos(out Win32API.POINT cur);
-                if (cur.X == x && cur.Y == y)
-                    return;
-
-                try { OLAPlug.OLAPlugDLLHelper.MoveToWithoutSimulator(OlaServer.OLAObject, x, y); return; }
-                catch { }
-            }
             SetCursorPos(x, y);
         }
 
         /// <summary>
         /// 左键单击
         /// </summary>
-        public static void LeftClick(int downUpDelay = 150, OLAPlugServer? OlaServer = null)
+        public static void LeftClick(int downUpDelay = 150)
         {
-            if (OlaServer != null)
-            {
-                try
-                {
-                    OLAPlug.OLAPlugDLLHelper.LeftDown(OlaServer.OLAObject);
-                    Thread.Sleep(downUpDelay);
-                    OLAPlug.OLAPlugDLLHelper.LeftUp(OlaServer.OLAObject);
-                }
-                catch { /* fall back if OLA call fails */ }
-            }
-            else
-            {
-                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
-                Thread.Sleep(downUpDelay);
-                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
-            }
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+            Thread.Sleep(downUpDelay);
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
         }
 
         /// <summary>
         /// 左键双击
         /// </summary>
-        public static void LeftDoubleClick(OLAPlugServer? OlaServer = null)
+        public static void LeftDoubleClick()
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.LeftDoubleClick(OlaServer.OLAObject); return; }
-                catch { }
-            }
             LeftClick();
             Thread.Sleep(150);
             LeftClick();
@@ -79,13 +45,8 @@ namespace WinFormsApp1
         /// <summary>
         /// 右键单击
         /// </summary>
-        public static void RightClick(OLAPlugServer? OlaServer = null)
+        public static void RightClick()
         {
-            if (OlaServer == null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.RightClick(OlaServer.OLAObject); return; }
-                catch { }
-            }
             mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
             Thread.Sleep(10);
             mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
@@ -94,13 +55,8 @@ namespace WinFormsApp1
         /// <summary>
         /// 中键单击
         /// </summary>
-        public static void MiddleClick(OLAPlugServer? OlaServer = null)
+        public static void MiddleClick()
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.MiddleClick(OlaServer.OLAObject); return; }
-                catch { }
-            }
             mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, UIntPtr.Zero);
             Thread.Sleep(10);
             mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, UIntPtr.Zero);
@@ -109,52 +65,32 @@ namespace WinFormsApp1
         /// <summary>
         /// 左键按下
         /// </summary>
-        public static void LeftDown(OLAPlugServer? OlaServer = null)
+        public static void LeftDown()
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.LeftDown(OlaServer.OLAObject); return; }
-                catch { }
-            }
             mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
         }
 
         /// <summary>
         /// 左键释放
         /// </summary>
-        public static void LeftUp(OLAPlugServer? OlaServer = null)
+        public static void LeftUp()
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.LeftUp(OlaServer.OLAObject); return; }
-                catch { }
-            }
             mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
         }
 
         /// <summary>
         /// 右键按下
         /// </summary>
-        public static void RightDown(OLAPlugServer? OlaServer = null)
+        public static void RightDown()
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.RightDown(OlaServer.OLAObject); return; }
-                catch { }
-            }
             mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
         }
 
         /// <summary>
         /// 右键释放
         /// </summary>
-        public static void RightUp(OLAPlugServer? OlaServer = null)
+        public static void RightUp()
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.RightUp(OlaServer.OLAObject); return; }
-                catch { }
-            }
             mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
         }
 
@@ -167,27 +103,11 @@ namespace WinFormsApp1
         /// <param name="x">屏幕 X 坐标（像素）。</param>
         /// <param name="y">屏幕 Y 坐标（像素）。</param>
         /// <param name="notches">刻度数，正数向上滚动，负数向下滚动。</param>
-        public static void MouseWheel(int x, int y, int notches, OLAPlugServer? OlaServer = null)
+        public static void MouseWheel(int x, int y, int notches)
         {
             const int WHEEL_DELTA = 120;
             int delta = notches * WHEEL_DELTA;
             // mouse_event 的 dwData 为 uint，负值需按补码传递
-            //if (OlaServer != null && useOla)
-            //{
-
-            //    MouseMove(x, y, AbsPoint: true);
-
-            //    Thread.Sleep(150);
-            //    try
-            //    {
-            //        if (delta > 0)
-            //            OlaServer.WheelUp();
-            //        else
-            //            OlaServer.WheelDown();
-            //        return;
-            //    }
-            //    catch { }
-            //}
             //var random = new Random();
 
             //SetCursorPos(x + random.Next(-100, 100), y + random.Next(-100, 100));
@@ -228,40 +148,24 @@ namespace WinFormsApp1
         /// <summary>
         /// 按下单个键
         /// </summary>
-        public static void KeyDown(Keys key, OLAPlugServer? OlaServer = null)
+        public static void KeyDown(Keys key)
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.KeyDown(OlaServer.OLAObject, (int)key); return; }
-                catch { }
-            }
-
             keybd_event((byte)key, (byte)MapVirtualKey((uint)key, 0), 0, UIntPtr.Zero);
         }
 
         /// <summary>
         /// 释放单个键
         /// </summary>
-        public static void KeyUp(Keys key, OLAPlugServer? OlaServer = null)
+        public static void KeyUp(Keys key)
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.KeyUp(OlaServer.OLAObject, (int)key); return; }
-                catch { }
-            }
             keybd_event((byte)key, (byte)MapVirtualKey((uint)key, 0), KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
 
         /// <summary>
         /// 按键（按下并释放）
         /// </summary>
-        public static void KeyPress(Keys key, int delay = 10, OLAPlugServer? OlaServer = null)
+        public static void KeyPress(Keys key, int delay = 10)
         {
-            if (OlaServer != null)
-            {
-                try { OLAPlug.OLAPlugDLLHelper.KeyPress(OlaServer.OLAObject, (int)key); return; }
-                catch { }
-            }
             KeyDown(key);
             Thread.Sleep(delay);
             KeyUp(key);
@@ -270,7 +174,7 @@ namespace WinFormsApp1
         /// <summary>
         /// 模拟输入文本
         /// </summary>
-        public static void TypeText(string text, OLAPlugServer? OlaServer = null)
+        public static void TypeText(string text)
         {
             foreach (char c in text)
             {

@@ -29,4 +29,4 @@ This directory is intentionally ignored by Git. Do not commit extracted model fi
 - `Capture/` - screen and game-window capture helpers.
 - `Automation/` - mouse/keyboard/window-message automation helpers.
 - `Ocr/` - Paddle runtime and OCR service helpers.
-- `Interop/` - Win32 and OLA plugin interop wrappers.
+- `Interop/` - Win32 interop wrappers.

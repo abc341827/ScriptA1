@@ -50,7 +50,6 @@
             label4 = new Label();
             pictureBox2 = new PictureBox();
             pictureBox3 = new PictureBox();
-            button9 = new Button();
             button10 = new Button();
             button8 = new Button();
             ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
@@ -262,16 +261,6 @@
             pictureBox3.TabIndex = 25;
             pictureBox3.TabStop = false;
             // 
-            // button9
-            // 
-            button9.Location = new Point(15, 215);
-            button9.Name = "button9";
-            button9.Size = new Size(100, 52);
-            button9.TabIndex = 26;
-            button9.Text = "绑定窗口/解绑窗口";
-            button9.UseVisualStyleBackColor = true;
-            button9.Click += button9_Click;
-            // 
             // button10
             // 
             button10.Location = new Point(15, 273);
@@ -299,7 +288,6 @@
             ClientSize = new Size(800, 450);
             Controls.Add(button8);
             Controls.Add(button10);
-            Controls.Add(button9);
             Controls.Add(pictureBox3);
             Controls.Add(pictureBox2);
             Controls.Add(label4);
@@ -354,7 +342,6 @@
         private Label label4;
         private PictureBox pictureBox2;
         private PictureBox pictureBox3;
-        private Button button9;
         private Button button10;
         private Button button8;
     }
