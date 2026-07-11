@@ -1,0 +1,74 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>AnyCPU;x64</Platforms>
+	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>false</PublishSingleFile>
+	<SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+	  <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+	 <DebugType>embedded</DebugType>
+	  <ApplicationIcon>app.ico</ApplicationIcon>
+	  <Win32Icon>app.ico</Win32Icon>
+	  <AssemblyTitle>洗魔方</AssemblyTitle>
+	  <AssemblyName>洗魔方</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Resource\tessdata\**" />
+    <Compile Remove="runtimes\**" />
+    <EmbeddedResource Remove="Resource\tessdata\**" />
+    <EmbeddedResource Remove="runtimes\**" />
+    <None Remove="Resource\tessdata\**" />
+    <None Remove="runtimes\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="MissonCompelet.mp3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" />
+    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.11.0.20250507" />
+    <PackageReference Include="Sdcb.PaddleInference" Version="3.0.1" />
+    <PackageReference Include="Sdcb.PaddleOCR" Version="3.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="inference\EqAndMosterRec\inference.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="inference\EqAndMosterRec\inference.pdiparams">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="inference\EqAndMosterRec\inference.yml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="MissonCompelet.mp3">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="OLAPlug-beta64_x64.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="inference\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <!-- 如果這些檔案必須以實體檔存在（非內嵌），可加 ExcludeFromSingleFile -->
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+     </Content>
+   </ItemGroup>
+
+</Project>
