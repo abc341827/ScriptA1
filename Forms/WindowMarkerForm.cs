@@ -23,12 +23,12 @@ namespace WinFormsApp1
 
         public WindowMarkerForm(Rectangle targetRec, List<Point> initialMarkers)
         {
-            var bounds = targetRec; // ÒÑ¾­ÊÇÆÁÄ»×ø±ê
+            var bounds = targetRec; // å·²ç»æ˜¯å±å¹•åæ ‡
             var defaultPoints = new List<Point>
                     {
-                        new Point(bounds.Left + initialMarkers[0].X, bounds.Top +initialMarkers[0].Y),//×°±¸ÅàÑø(Ë¢ĞÂ)
-                        new Point(bounds.Left +initialMarkers[1].X, bounds.Top +initialMarkers[1].Y),//×î´ó
-                        new Point(bounds.Left + initialMarkers[2].X, bounds.Top +initialMarkers[2].Y)//È·¶¨
+                        new Point(bounds.Left + initialMarkers[0].X, bounds.Top +initialMarkers[0].Y),//è£…å¤‡åŸ¹å…»(åˆ·æ–°)
+                        new Point(bounds.Left +initialMarkers[1].X, bounds.Top +initialMarkers[1].Y),//æœ€å¤§
+                        new Point(bounds.Left + initialMarkers[2].X, bounds.Top +initialMarkers[2].Y)//ç¡®å®š
                     };
 
             _markers = defaultPoints?.Select(p => new Point(p.X, p.Y)).ToList() ?? new List<Point>();
@@ -70,11 +70,11 @@ namespace WinFormsApp1
             };
 
             // Save / Cancel buttons
-            _btnSave = new Button { Text = "±£´æ", Width = 80, Height = 30 };
-            _btnCancel = new Button { Text = "È¡Ïû", Width = 80, Height = 30 };
+            _btnSave = new Button { Text = "ä¿å­˜", Width = 80, Height = 30 };
+            _btnCancel = new Button { Text = "å–æ¶ˆ", Width = 80, Height = 30 };
             _lblHint = new Label { AutoSize = false, Width = 400, Height = 30 };
 
-            _lblHint.Text = "Ë«»÷Ìí¼Ó±ê¼Ç£¬ÓÒ¼üÉ¾³ı£¬ÍÏ¶¯ÒÆ¶¯¡£°´ Enter ±£´æ£¬Esc È¡Ïû¡£";
+            _lblHint.Text = "åŒå‡»æ·»åŠ æ ‡è®°ï¼Œå³é”®åˆ é™¤ï¼Œæ‹–åŠ¨ç§»åŠ¨ã€‚æŒ‰ Enter ä¿å­˜ï¼ŒEsc å–æ¶ˆã€‚";
             _lblHint.ForeColor = Color.White;
 
             _btnSave.Click += (s, e) => { this.DialogResult = DialogResult.OK; this.Close(); };
@@ -104,7 +104,7 @@ namespace WinFormsApp1
         {
             if (e.Button == MouseButtons.Left)
             {
-                // Ìí¼ÓĞÂ±ê¼Ç
+                // æ·»åŠ æ–°æ ‡è®°
                 var p = new Point(e.X, e.Y);
                 _markers.Add(p);
                 this.Invalidate();
@@ -115,7 +115,7 @@ namespace WinFormsApp1
         {
             if (e.Button == MouseButtons.Left)
             {
-                // ²éÕÒÊÇ·ñµã»÷µ½ÏÖÓĞ±ê¼Ç
+                // æŸ¥æ‰¾æ˜¯å¦ç‚¹å‡»åˆ°ç°æœ‰æ ‡è®°
                 for (int i = 0; i < _markers.Count; i++)
                 {
                     var m = _markers[i];
@@ -130,11 +130,11 @@ namespace WinFormsApp1
                     }
                 }
 
-                // Èç¹ûÃ»ÓĞµã»÷µ½±ê¼Ç£¬ÔÊĞíÍ¨¹ı×ó¼üÍÏ¶¯Ñ¡Ôñ£¨²»ÊµÏÖ£©
+                // å¦‚æœæ²¡æœ‰ç‚¹å‡»åˆ°æ ‡è®°ï¼Œå…è®¸é€šè¿‡å·¦é”®æ‹–åŠ¨é€‰æ‹©ï¼ˆä¸å®ç°ï¼‰
             }
             else if (e.Button == MouseButtons.Right)
             {
-                // ÓÒ¼üÉ¾³ıÃüÖĞ±ê¼Ç
+                // å³é”®åˆ é™¤å‘½ä¸­æ ‡è®°
                 for (int i = 0; i < _markers.Count; i++)
                 {
                     var m = _markers[i];
@@ -155,7 +155,7 @@ namespace WinFormsApp1
             if (_dragIndex >= 0)
             {
                 var newPos = new Point(e.X - _dragOffset.X, e.Y - _dragOffset.Y);
-                // ÏŞÖÆÔÚÆÁÄ»ÄÚ
+                // é™åˆ¶åœ¨å±å¹•å†…
                 newPos.X = Math.Max(0, Math.Min(this.ClientSize.Width, newPos.X));
                 newPos.Y = Math.Max(0, Math.Min(this.ClientSize.Height, newPos.Y));
                 _markers[_dragIndex] = newPos;
@@ -163,7 +163,7 @@ namespace WinFormsApp1
             }
             else
             {
-                // ¸üĞÂ¹â±êÑùÊ½£¬Èç¹ûĞüÍ£ÔÚ±ê¼ÇÉÏ
+                // æ›´æ–°å…‰æ ‡æ ·å¼ï¼Œå¦‚æœæ‚¬åœåœ¨æ ‡è®°ä¸Š
                 bool over = _markers.Any(m => (m.X - e.X) * (m.X - e.X) + (m.Y - e.Y) * (m.Y - e.Y) <= MarkerRadius * MarkerRadius);
                 this.Cursor = over ? Cursors.Hand : Cursors.Cross;
             }
@@ -182,8 +182,8 @@ namespace WinFormsApp1
         {
             var g = e.Graphics;
 
-            // »æÖÆ°ëÍ¸Ã÷ÕÚÕÖ£¨ÒÑ¾­ÓÉ Opacity ÊµÏÖ£¬µ«¿ÉÔÙ»æÖÆÒ»Ğ©Ö¸Ê¾£©
-            // »æÖÆ±ê¼Ç
+            // ç»˜åˆ¶åŠé€æ˜é®ç½©ï¼ˆå·²ç»ç”± Opacity å®ç°ï¼Œä½†å¯å†ç»˜åˆ¶ä¸€äº›æŒ‡ç¤ºï¼‰
+            // ç»˜åˆ¶æ ‡è®°
             for (int i = 0; i < _markers.Count; i++)
             {
                 var m = _markers[i];
@@ -195,7 +195,7 @@ namespace WinFormsApp1
                     g.DrawEllipse(pen, rect);
                 }
 
-                // »æÖÆ±àºÅ
+                // ç»˜åˆ¶ç¼–å·
                 var label = (i + 1).ToString();
                 using (var font = new Font("Arial", 10, FontStyle.Bold))
                 using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })

@@ -45,18 +45,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="inference\EqAndMosterRec\inference.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="inference\EqAndMosterRec\inference.pdiparams">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="inference\EqAndMosterRec\inference.yml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="MissonCompelet.mp3">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="OLAPlug-beta64_x64.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

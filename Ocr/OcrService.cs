@@ -40,8 +40,6 @@ namespace WinFormsApp1
                 // 先尝试使用流接口
                 try
                 {
-                    var b64 = Convert.ToBase64String(bytes);
-                    return SendImageBase64Async(b64).GetAwaiter().GetResult();
                     return SendImageStreamAsync(bytes).GetAwaiter().GetResult();
                 }
                 catch
@@ -71,7 +69,7 @@ namespace WinFormsApp1
 
         private async Task<string> SendImageBase64Async(string base64)
         {
-            var payload = new { base64str = 1 };
+            var payload = new { base64str = base64 };
             var json = JsonSerializer.Serialize(payload);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             var resp = await _http.PostAsync($"{_baseUrl}/ocr/base64", content).ConfigureAwait(false);

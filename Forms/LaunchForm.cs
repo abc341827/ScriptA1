@@ -31,7 +31,7 @@ namespace WinFormsApp1
             btnForm1.Name = "btnForm1";
             btnForm1.Size = new Size(120, 36);
             btnForm1.TabIndex = 1;
-            btnForm1.Text = "Ï´Ä§·½";
+            btnForm1.Text = "æ´—é­”æ–¹";
             btnForm1.UseVisualStyleBackColor = true;
             btnForm1.Click += BtnForm1_Click;
             // 
@@ -41,7 +41,7 @@ namespace WinFormsApp1
             btnForm2.Name = "btnForm2";
             btnForm2.Size = new Size(120, 36);
             btnForm2.TabIndex = 2;
-            btnForm2.Text = "ÀèÃ÷ÅÄÂô";
+            btnForm2.Text = "é»æ˜æ‹å–";
             btnForm2.UseVisualStyleBackColor = true;
             btnForm2.Click += BtnForm2_Click;
             // 
@@ -53,7 +53,7 @@ namespace WinFormsApp1
             label1.Name = "label1";
             label1.Size = new Size(377, 21);
             label1.TabIndex = 0;
-            label1.Text = "ÇëÑ¡ÔñÒªÆô¶¯µÄ½çÃæ / Please choose a form to start";
+            label1.Text = "è¯·é€‰æ‹©è¦å¯åŠ¨çš„ç•Œé¢ / Please choose a form to start";
             // 
             // LaunchForm
             // 
@@ -66,7 +66,7 @@ namespace WinFormsApp1
             MinimizeBox = false;
             Name = "LaunchForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Æô¶¯Ñ¡Ôñ / Launcher";
+            Text = "å¯åŠ¨é€‰æ‹© / Launcher";
             ResumeLayout(false);
             PerformLayout();
         }
@@ -76,14 +76,14 @@ namespace WinFormsApp1
             try
             {
                 var f1 = new Form1();
-                // µ±±»Æô¶¯´°Ìå¹Ø±ÕºóÒ²¹Ø±ÕÆô¶¯´°Ìå
+                // å½“è¢«å¯åŠ¨çª—ä½“å…³é—­åä¹Ÿå…³é—­å¯åŠ¨çª—ä½“
                 f1.FormClosed += (s, args) => this.Close();
                 this.Hide();
                 f1.Show();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ÎŞ·¨Æô¶¯ Form1: {ex.Message}", "Æô¶¯Ê§°Ü", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"æ— æ³•å¯åŠ¨ Form1: {ex.Message}", "å¯åŠ¨å¤±è´¥", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -98,7 +98,7 @@ namespace WinFormsApp1
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ÎŞ·¨Æô¶¯ Form2: {ex.Message}", "Æô¶¯Ê§°Ü", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"æ— æ³•å¯åŠ¨ Form2: {ex.Message}", "å¯åŠ¨å¤±è´¥", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
