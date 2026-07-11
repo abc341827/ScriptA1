@@ -68,28 +68,4 @@ namespace WinFormsApp1
             return true;
         }
     }
-
-    // 游戏属性类
-    public class GameAttribute
-    {
-        public string Name { get; set; }          // 属性名，如 "HP", "MP", "Attack"
-        public string Value { get; set; }         // 数值（如果是数值类型）
-        public string StringValue { get; set; }   // 字符串值（如果是非数值）
-        public string OriginalString { get; set; } // 原始匹配字符串
-        public bool IsPercentage { get; set; }    // 是否是百分比
-        public bool IsNumeric { get; set; } = true; // 是否是数值
-        public bool IsInteger { get; set; }       // 是否是整数
-
-        public override string ToString()
-        {
-            if (IsNumeric)
-            {
-                return $"{Name}: {Value}" + (IsPercentage ? "%" : "");
-            }
-            else
-            {
-                return $"{Name}: {StringValue}";
-            }
-        }
-    }
 }

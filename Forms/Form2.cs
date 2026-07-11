@@ -1,11 +1,4 @@
-﻿
-using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Json;
-using static System.Windows.Forms.AxHost;
+﻿using System.Runtime.InteropServices;
 using static WinFormsApp1.Win32API;
 using Point = System.Drawing.Point;
 
@@ -15,10 +8,11 @@ namespace WinFormsApp1
     {
         // 最大日志长度，超过则从头部裁剪
         private const int _richTextMaxLength = 2000;
-        private readonly string _listBoxDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinFormsApp1", "listbox_items.json");
         private ScreenCaptureManager _captureManager;
-        private dawnBuy dawnBuy;
+        private MarketAutomationService _marketAutomationService;
+        private readonly IInputController _inputController = new Win32InputController();
         private List<TradeItem> tradeItems;
+        private Dictionary<string, Label> _tradeItemLabels;
         private List<Tuple<string, int>> toBuy = new List<Tuple<string, int>>();
         private bool _isSelecting = false;
         private IntPtr targetWindow;
@@ -46,97 +40,45 @@ namespace WinFormsApp1
             InitializeCaptureManager();
             var mf = Task.Run(() =>
             {
-                dawnBuy = new dawnBuy(_captureManager);
-                dawnBuy.ProgressChanged += DawnBuy_ProgressChanged;
-                dawnBuy.postMessage += DawnBuy_postMessage; ;
+                _marketAutomationService = new MarketAutomationService(_captureManager, _inputController);
+                _marketAutomationService.ProgressChanged += MarketAutomationService_ProgressChanged;
+                _marketAutomationService.postMessage += MarketAutomationService_PostMessage;
 
             });
 
-            tradeItems = new List<TradeItem> {
-                new TradeItem { Name = "离子薄膜" , label = this.离子薄膜},
-                new TradeItem { Name = "纳米晶核", label = this.纳米晶核 },
-                new TradeItem { Name = "配件指南" , label = this.配件指南},
-                new TradeItem { Name = "加固合金" , label = this.加固合金},
-                new TradeItem { Name = "尖兵密钥" , label = this.尖兵密钥},
-                new TradeItem { Name = "工艺蓝图" , label = this.工艺蓝图},
-                new TradeItem { Name = "3级碳化硅晶粒" , label = this.三级碳化硅晶粒},
-                new TradeItem { Name = "4级碳化硅晶粒" , label = this.四级碳化硅晶粒},
-                new TradeItem { Name = "超导晶核" , label = this.超导晶核},
-                new TradeItem { Name = "源能核心" , label = this.源能核心},
-                new TradeItem { Name = "3级源能碎片" , label = this.三级源能碎片},
-                new TradeItem { Name = "配件增幅器" , label = this.配件增幅器},
-                new TradeItem { Name = "3级枪械增强核心", label = this.三级枪械增强核心 },
-                new TradeItem { Name = "3级防具增强核心" , label = this.三级防具增强核心},
-                new TradeItem { Name = "极光序列" , label = this.极光序列},
-                new TradeItem { Name = "耀斑精华" , label = this.耀斑精华},
+            _tradeItemLabels = new Dictionary<string, Label>
+            {
+                ["离子薄膜"] = this.离子薄膜,
+                ["纳米晶核"] = this.纳米晶核,
+                ["配件指南"] = this.配件指南,
+                ["加固合金"] = this.加固合金,
+                ["尖兵密钥"] = this.尖兵密钥,
+                ["工艺蓝图"] = this.工艺蓝图,
+                ["3级碳化硅晶粒"] = this.三级碳化硅晶粒,
+                ["4级碳化硅晶粒"] = this.四级碳化硅晶粒,
+                ["超导晶核"] = this.超导晶核,
+                ["源能核心"] = this.源能核心,
+                ["3级源能碎片"] = this.三级源能碎片,
+                ["配件增幅器"] = this.配件增幅器,
+                ["3级枪械增强核心"] = this.三级枪械增强核心,
+                ["3级防具增强核心"] = this.三级防具增强核心,
+                ["极光序列"] = this.极光序列,
+                ["耀斑精华"] = this.耀斑精华,
             };
+            tradeItems = _tradeItemLabels.Keys.Select(name => new TradeItem { Name = name }).ToList();
             RegisterHotkeyOrShowError(HOTKEY_ID_1, None, (uint)Keys.F5);
             // load persisted listbox items
             LoadListBoxItems();
-            //frmMain_LoadAsync();
         }
 
-        private void frmMain_LoadAsync()
-        {
-            //Task.Run(async () =>
-            //{
-            //    Environment.SetEnvironmentVariable("GLOG_v", "0");
-            //    FullOcrModel model = await OnlineFullModels.ChineseV5.DownloadAsync();
-            //    FastCheck(model);
-            //});
-
-            ////string startupPath = Application.StartupPath;
-            ////string rootDirectory = EngineBase.GetRootDirectory();
-            ////string path = Path.Combine(rootDirectory, "inference");     
-            ////string directoryPath = Path.Combine(path, "yt_PP-OCRv5_mobile_det_infer");
-            ////string directoryPath2 = Path.Combine(path, "yt_PP-OCRv5_mobile_cls_infer");
-            ////string directoryPath3 = Path.Combine(path, "yt_PP-OCRv5_mobile_rec_infer");
-            ////string labelPath = startupPath + "inference\\ppocrv5_dict.txt";
-            ////var model = new FullOcrModel(
-            ////        DetectionModel.FromDirectory(directoryPath, ModelVersion.V5),
-            ////        ClassificationModel.FromDirectory(directoryPath2),
-            ////        RecognizationModel.FromDirectory(directoryPath3, labelPath, ModelVersion.V5));
-            ////Program.paddleOcr = new PaddleOcrAll(model, PaddleDevice.Gpu());
-            //Program.paddleOcr.AllowRotateDetection = true;
-            //Program.paddleOcr.Enable180Classification = false;
-
-
-        }
-
-        //private static void FastCheck(FullOcrModel model)
-        //{
-        //    // from: https://visualstudio.microsoft.com/wp-content/uploads/2021/11/Home-page-extension-visual-updated.png
-        //    byte[] sampleImageData = File.ReadAllBytes(@"C:\Users\liminghan\Pictures\Test\65561526-1c25-4147-a9d6-8ffc13c3c382.png");
-        //    Environment.SetEnvironmentVariable("GLOG_logtostderr", "1");
-        //    Environment.SetEnvironmentVariable("GLOG_v", "2");
-        //    using (PaddleOcrAll all = new(model)
-        //    {
-        //        AllowRotateDetection = true,
-        //        Enable180Classification = true,
-        //    })
-        //    {
-        //        // Load local file by following code:
-        //        // using (Mat src2 = Cv2.ImRead(@"C:\test.jpg"))
-        //        using (Mat src = Cv2.ImDecode(sampleImageData, ImreadModes.Color))
-        //        {
-        //            PaddleOcrResult result = all.Run(src);
-        //            Console.WriteLine("Detected all texts: \n" + result.Text);
-        //            foreach (PaddleOcrResultRegion region in result.Regions)
-        //            {
-        //                Console.WriteLine($"Text: {region.Text}, Score: {region.Score}, RectCenter: {region.Rect.Center}, RectSize:    {region.Rect.Size}, Angle: {region.Rect.Angle}");
-        //            }
-        //        }
-        //    }
-        //}
-
-        private void DawnBuy_postMessage(string obj)
+        private void MarketAutomationService_PostMessage(string obj)
         {
             if (obj == "执行向上滑动以回到顶部")
             {
                 //然后刷新页面
-                InputSimulator.MouseMove(this.points[0].X, this.points[0].Y, AbsPoint: true);
+                _inputController.MoveMouse(this.points[0].X, this.points[0].Y, absPoint: true);
                 Thread.Sleep(100);
-                InputSimulator.LeftClick();
+                _inputController.LeftClick();
             }
             else
             {
@@ -180,7 +122,7 @@ namespace WinFormsApp1
             }
         }
 
-        private void DawnBuy_ProgressChanged(TradeItem obj)
+        private void MarketAutomationService_ProgressChanged(TradeItem obj)
         {
             var item = tradeItems.FirstOrDefault(x => x.Name == obj.Name);
             if (item != null)
@@ -195,10 +137,11 @@ namespace WinFormsApp1
             {
                 return;
             }
+            if (_tradeItemLabels.TryGetValue(item.Name, out var label))
             {
-                item.label.Invoke(() =>
+                label.Invoke(() =>
                 {
-                    item.label.Text = $"{item.Name} 价格:{item.Price}";
+                    label.Text = $"{item.Name} 价格:{item.Price}";
                 });
             }
             var buy = this.toBuy.FirstOrDefault(x => x.Item1 == obj.Name);
@@ -206,17 +149,17 @@ namespace WinFormsApp1
             {
                 if (buy.Item2 >= obj.Price)
                 {
-                    InputSimulator.MouseMove(obj.Position.X, obj.Position.Y, AbsPoint: true);
+                    _inputController.MoveMouse(obj.Position.X, obj.Position.Y, absPoint: true);
                     Thread.Sleep(150);
-                    InputSimulator.LeftClick();
+                    _inputController.LeftClick();
                     Thread.Sleep(500);
-                    InputSimulator.MouseMove(this.points[1].X, this.points[1].Y, AbsPoint: true);
+                    _inputController.MoveMouse(this.points[1].X, this.points[1].Y, absPoint: true);
                     Thread.Sleep(150);
-                    InputSimulator.LeftClick();
+                    _inputController.LeftClick();
                     Thread.Sleep(500);
-                    InputSimulator.MouseMove(this.points[2].X, this.points[2].Y, AbsPoint: true);
+                    _inputController.MoveMouse(this.points[2].X, this.points[2].Y, absPoint: true);
                     Thread.Sleep(150);
-                    InputSimulator.LeftClick();
+                    _inputController.LeftClick();
                     AppendLog("买！" + buy.Item1);
                     Thread.Sleep(2000);
                 }
@@ -260,9 +203,8 @@ namespace WinFormsApp1
             catch
             {
             }
-            dawnBuy._rollNumber = num;
-            dawnBuy._rollSize = num1;
-            dawnBuy.Run();
+            _marketAutomationService.SetScrollOptions(num, num1);
+            _marketAutomationService.Run();
 
         }
         public IntPtr temphandle = IntPtr.Zero;
@@ -296,7 +238,7 @@ namespace WinFormsApp1
                 IntPtr top = GetAncestor(hWnd, GA_ROOT);
                 var rec = GameWindowCapture.GetWindowBounds(top);
                 var title = GetWindowTextW(top);
-                this.dawnBuy._isLeiGod = title.Contains("雷电");
+                this._marketAutomationService.SetIsLeiGod(title.Contains("雷电"));
                 // todo :show tips 
 
 
@@ -329,7 +271,7 @@ namespace WinFormsApp1
                         }
 
                         temphandle = hWnd;
-                        InputSimulator.windowRec = rec;
+                        _inputController.WindowBounds = rec;
                     }
                 });
             });
@@ -398,14 +340,14 @@ namespace WinFormsApp1
 
         private void button4_Click(object sender, EventArgs e)
         {
-            this.dawnBuy.cancellationTokenSource.Cancel();
+            this._marketAutomationService.Stop();
         }
 
         private void button5_Click(object sender, EventArgs e)
         {
             _captureManager.ShowSelector(action1: (a) =>
             {
-                dawnBuy.color = GetColorAt(a.X, a.Y);
+                _marketAutomationService.SetBorderColor(GetColorAt(a.X, a.Y));
             });
 
         }
@@ -428,11 +370,7 @@ namespace WinFormsApp1
         {
             try
             {
-                var dir = Path.GetDirectoryName(_listBoxDataPath);
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                if (!File.Exists(_listBoxDataPath)) return;
-                var json = File.ReadAllText(_listBoxDataPath);
-                var list = JsonSerializer.Deserialize<List<string>>(json);
+                var list = JsonFileStore.Load<List<string>>(AppPaths.MarketListBoxItemsFile);
                 if (list == null) return;
                 this.listBox1.Items.Clear();
                 foreach (var it in list) this.listBox1.Items.Add(it);
@@ -448,12 +386,9 @@ namespace WinFormsApp1
         {
             try
             {
-                var dir = Path.GetDirectoryName(_listBoxDataPath);
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
                 var list = new List<string>();
                 foreach (var it in this.listBox1.Items) list.Add(it?.ToString() ?? string.Empty);
-                var json = JsonSerializer.Serialize(list);
-                File.WriteAllText(_listBoxDataPath, json);
+                JsonFileStore.Save(AppPaths.MarketListBoxItemsFile, list);
             }
             catch (Exception ex)
             {
@@ -471,35 +406,13 @@ namespace WinFormsApp1
 
         private void button3_Click(object sender, EventArgs e)
         {               //然后刷新页面
-            InputSimulator.MouseMove(this.points[0].X, this.points[0].Y, AbsPoint: true);
+            _inputController.MoveMouse(this.points[0].X, this.points[0].Y, absPoint: true);
             Thread.Sleep(100);
 
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+            _inputController.LeftDown();
             Thread.Sleep(int.Parse(this.textBox2.Text));
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+            _inputController.LeftUp();
         }
 
-    }
-
-    public class TradeItem
-    {
-        public string Name { get; set; }
-
-        public int Price { get; set; }
-
-        public string All { get; set; }
-
-        public string LowLeft { get; set; }
-
-        public Rectangle Rect { get; set; }
-        public Label label { get; set; }
-
-        public Point Position
-        {
-            get
-            {
-                return new Point(Rect.X + Rect.Width / 2, Rect.Y + Rect.Height / 2);
-            }
-        }
     }
 }

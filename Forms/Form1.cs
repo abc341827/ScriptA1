@@ -2,25 +2,12 @@ using NAudio.MediaFoundation;
 using OpenCvSharp.Flann;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 using YamlDotNet.Core.Tokens;
 
 namespace WinFormsApp1
 {
     public partial class Form1 : Form
     {
-        // 保存/加载应用状态的文件名（存放在 %AppData%/WinFormsApp1/appstate.json）
-        private static readonly string _stateFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WinFormsApp1", "appstate.json");
-        private class AppState
-        {
-            public string Combo1 { get; set; }
-            public string Combo2 { get; set; }
-            public string Combo3 { get; set; }
-            public string Combo4 { get; set; }
-            public string Combo5 { get; set; }
-            public string Combo6 { get; set; }
-            public List<string> ListBoxItems { get; set; }
-        }
         // 全局热键相关
         private const int HOTKEY_ID_1 = 1;
         private const int HOTKEY_ID_2 = 2;
@@ -49,8 +36,9 @@ namespace WinFormsApp1
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         private int count = 1;
-        private ximofang mofang;
+        private CubeAutomationService mofang;
         private ScreenCaptureManager _captureManager;
+        private readonly IInputController _inputController = new Win32InputController();
         private bool _isSelecting = false;
 
         public Form1()
@@ -63,7 +51,7 @@ namespace WinFormsApp1
             this.FormClosed += Form1_FormClosed;
             var mf = Task.Run(async () =>
             {
-                mofang = new ximofang(_captureManager);
+                mofang = new CubeAutomationService(_captureManager, _inputController);
                 //var model = await OnlineFullModels.ChineseServerV5.DownloadAsync();
                 //mofang.myocrService = new PaddleOcrAll(model);
 
@@ -109,11 +97,7 @@ namespace WinFormsApp1
         {
             try
             {
-                if (!File.Exists(_stateFilePath))
-                    return;
-
-                var json = File.ReadAllText(_stateFilePath);
-                var state = JsonSerializer.Deserialize<AppState>(json);
+                var state = JsonFileStore.Load<AppState>(AppPaths.CubeAppStateFile);
                 if (state == null)
                     return;
 
@@ -141,10 +125,6 @@ namespace WinFormsApp1
         {
             try
             {
-                var dir = Path.GetDirectoryName(_stateFilePath);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir!);
-
                 var state = new AppState
                 {
                     Combo1 = comboBox1.Text,
@@ -159,8 +139,7 @@ namespace WinFormsApp1
                 foreach (var it in listBox1.Items)
                     state.ListBoxItems.Add(it?.ToString() ?? string.Empty);
 
-                var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_stateFilePath, json);
+                JsonFileStore.Save(AppPaths.CubeAppStateFile, state, writeIndented: true);
             }
             catch
             {
@@ -255,17 +234,30 @@ namespace WinFormsApp1
             }));
         }
 
+        private bool ApplyTargetProperties()
+        {
+            var targetProperties = new List<List<string>>();
+            foreach (string item in listBox1.Items)
+            {
+                targetProperties.Add([.. item.Split("|")]);
+            }
+
+            if (targetProperties.Count == 0)
+            {
+                MessageBox.Show("未設置屬性");
+                return false;
+            }
+
+            mofang.SetTargetProperties(targetProperties);
+            return true;
+        }
+
         private void button1_Click(object sender, EventArgs e)
         {
             //var text = new OcrService().RecognizeBaidu("D:\\Project\\WinFormsApp1\\Resource\\属性.png");
-            ximofang.targetProperties.Clear();
-            foreach (string item in listBox1.Items)
+            if (!ApplyTargetProperties())
             {
-                ximofang.targetProperties.Add([.. item.Split("|")]);
-            }
-            if (ximofang.targetProperties.Count == 0)
-            {
-                MessageBox.Show("未設置屬性");
+                return;
             }
             string gameProcessName = this.textBox2.Text;
             var windowInfo = GameWindowCapture.FindWindowByProcessName(gameProcessName, false);
@@ -302,7 +294,7 @@ namespace WinFormsApp1
 
         private void button4_Click(object sender, EventArgs e)
         {
-            this.mofang.cancellationTokenSource.Cancel();
+            this.mofang.Stop();
         }
 
         private void button5_Click(object sender, EventArgs e)
@@ -318,7 +310,7 @@ namespace WinFormsApp1
                     var rec = GameWindowCapture.GetWindowBounds(top);
                     MessageBox.Show(temphandle.ToString());
                     temphandle = hWnd;
-                    InputSimulator.windowRec = rec;
+                    _inputController.WindowBounds = rec;
                 });
                 button5.Text = _isSelecting ? "停止选择 (ESC)" : "选择区域";
                 button5.BackColor = _isSelecting ? Color.LightCoral : SystemColors.Control;
@@ -336,14 +328,9 @@ namespace WinFormsApp1
 
         private void button6_Click(object sender, EventArgs e)
         {
-            ximofang.targetProperties.Clear();
-            foreach (string item in listBox1.Items)
+            if (!ApplyTargetProperties())
             {
-                ximofang.targetProperties.Add([.. item.Split("|")]);
-            }
-            if (ximofang.targetProperties.Count == 0)
-            {
-                MessageBox.Show("未設置屬性");
+                return;
             }
             string gameProcessName = this.textBox2.Text;
             var windowInfo = GameWindowCapture.FindWindowByProcessName(gameProcessName, false);
@@ -401,7 +388,6 @@ namespace WinFormsApp1
 
             //string dllFullPath = @"D:\Project\MXDWndProc\x64\Debug\MXDWndProc.dll"; // 改为实际路径
             //Injector.CallRemoteFunction(pid, dllFullPath, "CheckAndExecuteKey", 56);
-            // Prefer using OLA service if available. Otherwise fall back to Win32 PostMessage via InputSimulator.
             {
                 Task.Run(() =>
                 {

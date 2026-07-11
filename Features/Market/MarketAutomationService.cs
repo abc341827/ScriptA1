@@ -1,41 +1,59 @@
 ﻿using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using Sdcb.PaddleInference;
-using Sdcb.PaddleInference.Native;
 using Sdcb.PaddleOCR;
-using Sdcb.PaddleOCR.Models;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace WinFormsApp1
 {
-    public class dawnBuy
+    public class MarketAutomationService
     {
         public PaddleOcrAll myocrService;
-        public bool _isLeiGod = false;
         private readonly ScreenCaptureManager _captureManager;
-        // swipe configuration
-        private readonly int _swipesPerLoop = 1; // 每次循环内滑动次数
-        public int _rollSize = 2; // 循环多少次后，进行一次向上滑动
-        public Color color = Color.FromArgb(102, 205, 213);
-        private readonly int _upSwipeExtra = 1; // 到顶后多滑动次数
-        public int _rollNumber = 1; //滑动次数
-        private readonly int _swipePause = 5; // 每次滑动后暂停（ms）
+        private readonly IInputController _inputController;
+        private readonly MarketAutomationOptions _options = new MarketAutomationOptions();
         public event Action<TradeItem> ProgressChanged;
         public event Action<string> postMessage;
-        public CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        public dawnBuy(ScreenCaptureManager captureManager)
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        public MarketAutomationService(ScreenCaptureManager captureManager, IInputController? inputController = null)
         {
             InitOcr();
             _captureManager = captureManager;
+            _inputController = inputController ?? new Win32InputController();
+        }
+
+        public void Configure(MarketAutomationOptions options)
+        {
+            _options.IsLeiGod = options.IsLeiGod;
+            _options.RollSize = options.RollSize;
+            _options.RollNumber = options.RollNumber;
+            _options.BorderColor = options.BorderColor;
+            _options.SwipePause = options.SwipePause;
+            _options.UpSwipeExtra = options.UpSwipeExtra;
+        }
+
+        public void SetScrollOptions(int rollNumber, int rollSize)
+        {
+            _options.RollNumber = rollNumber;
+            _options.RollSize = rollSize;
+        }
+
+        public void SetIsLeiGod(bool isLeiGod)
+        {
+            _options.IsLeiGod = isLeiGod;
+        }
+
+        public void SetBorderColor(Color borderColor)
+        {
+            _options.BorderColor = borderColor;
+        }
+
+        public void Stop()
+        {
+            _cancellationTokenSource.Cancel();
         }
 
 
@@ -43,39 +61,8 @@ namespace WinFormsApp1
         {
             try
             {
-                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                string startupPath = AppDomain.CurrentDomain.BaseDirectory;
-                string directoryPath = startupPath + "inference\\PP-OCRv5_mobile_det_infer";
-                string directoryPath2 = startupPath + "inference\\ch_ppocr_mobile_v2.0_cls_infer";
-                //string directoryPath3 = startupPath + "inference\\EqAndMosterRec";
-                string directoryPath3 = startupPath + "inference\\PP-OCRv5_mobile_rec_infer";
-                //
-                //string labelPath = startupPath + "inference\\EqMonster_dict.txt";
-                string labelPath = "";
-                // string labelPath = startupPath + "inference\\ppocrv5_dict.txt";
-
-                myocrService = new PaddleOcrAll(
-                    new FullOcrModel(
-                        DetectionModel.FromDirectory(directoryPath, ModelVersion.V5),
-                        ClassificationModel.FromDirectory(directoryPath2),
-                        RecognizationModel.FromDirectory(directoryPath3, labelPath, ModelVersion.V5)),
-                   (device) =>
-                   {
-                       try
-                       {
-                           device.EnableUseGpu(500, 0);
-                           var a = device.UseGpu;
-                       }
-                       catch (Exception ex)
-                       {
-                           MessageBox.Show($"启用 GPU 失败，回退到 CPU。错误：{ex.Message}");
-                           // 如果 GPU 初始化失败（例如驱动版本不对），回退到 CPU
-                           device.UseGpu = false;
-                       }
-                   });
-                myocrService.AllowRotateDetection = false;
-                myocrService.Enable180Classification = false;
-
+                myocrService = PaddleOcrFactory.CreateDefaultChineseV5(
+                    ex => MessageBox.Show($"启用 GPU 失败，回退到 CPU。错误：{ex.Message}"));
             }
             catch (Exception ex)
             {
@@ -87,16 +74,16 @@ namespace WinFormsApp1
 
         public void Run()
         {
-            cancellationTokenSource = new CancellationTokenSource();
+            _cancellationTokenSource = new CancellationTokenSource();
             var task = new Task(() =>
             {
                 int loopCounter = 0;
-                while (!cancellationTokenSource.IsCancellationRequested)
+                while (!_cancellationTokenSource.IsCancellationRequested)
                 {
 
                     #region 滑動
 
-                    if (cancellationTokenSource.IsCancellationRequested) return;
+                    if (_cancellationTokenSource.IsCancellationRequested) return;
 
                     var sel = _captureManager.CurrentSelection;
                     if (!sel.IsEmpty && sel.Width > 50 && sel.Height > 50)
@@ -105,23 +92,23 @@ namespace WinFormsApp1
                         int centerX = sel.X + sel.Width / 2;
 
                         int startY = sel.Y + sel.Height - Math.Min(60, sel.Height / 8);
-                        for (int i = 0; i < _rollNumber; i++)
+                        for (int i = 0; i < _options.RollNumber; i++)
                         {
                             CaptureAndRecognize();
-                            if (cancellationTokenSource.IsCancellationRequested) return;
-                            InputSimulator.MouseWheel(centerX, startY, -1 * _rollSize);
-                            Thread.Sleep(_swipePause);
+                            if (_cancellationTokenSource.IsCancellationRequested) return;
+                            _inputController.MouseWheel(centerX, startY, -1 * _options.RollSize);
+                            Thread.Sleep(_options.SwipePause);
                         }
 
 
                         {
-                            int upCount = _rollNumber * _rollSize + _upSwipeExtra;
+                            int upCount = _options.RollNumber * _options.RollSize + _options.UpSwipeExtra;
                             for (int u = 0; u < upCount; u++)
                             {
-                                if (cancellationTokenSource.IsCancellationRequested) return;
+                                if (_cancellationTokenSource.IsCancellationRequested) return;
 
-                                InputSimulator.MouseWheel(centerX, startY, 1);
-                                Thread.Sleep(_isLeiGod ? 400 : _swipePause);
+                                _inputController.MouseWheel(centerX, startY, 1);
+                                Thread.Sleep(_options.IsLeiGod ? 400 : _options.SwipePause);
                             }
                             postMessage?.Invoke("执行向上滑动以回到顶部");
                         }
@@ -142,7 +129,7 @@ namespace WinFormsApp1
 
             using (bmp)
             {
-                var list = TradeBorderDetector.DetectBorders(bmp, color);
+                var list = TradeBorderDetector.DetectBorders(bmp, _options.BorderColor);
                 if (list == null || list.Count == 0) return;
 
                 foreach (var item in list)
@@ -174,7 +161,7 @@ namespace WinFormsApp1
 
                 using (bmp)
                 {
-                    var list = TradeBorderDetector.DetectBorders(bmp, color);
+                    var list = TradeBorderDetector.DetectBorders(bmp, _options.BorderColor);
                     if (list == null || list.Count == 0) return;
 
                     foreach (var item in list)

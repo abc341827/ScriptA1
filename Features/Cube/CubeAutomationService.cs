@@ -3,27 +3,23 @@ using NAudio.CoreAudioApi;
 using NAudio.Utils;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using Sdcb.PaddleInference;
-using Sdcb.PaddleInference.Native;
 using Sdcb.PaddleOCR;
-using Sdcb.PaddleOCR.Models;
 
 using System.Diagnostics;
 using System.Media;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Xml.Linq;
 
 namespace WinFormsApp1
 {
-    public class ximofang
+    public class CubeAutomationService
     {
         private ScreenCaptureManager _captureManager;
+        private readonly IInputController _inputController;
+        private readonly List<List<string>> _targetProperties = new List<List<string>>();
         public event Action<string, string, Bitmap> ProgressChanged;
         public event Action<string> ProgressCompeleted;
         public PaddleOcrAll myocrService;
-        public CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        public static List<List<string>> targetProperties = new List<List<string>>();
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         public static readonly List<string> AllProperties = new List<string>
         {
             "STR",
@@ -46,39 +42,31 @@ namespace WinFormsApp1
         private Bitmap lastBit = null;
         private string lastText = "";
 
-        public ximofang(ScreenCaptureManager captureManager)
+        public CubeAutomationService(ScreenCaptureManager captureManager, IInputController? inputController = null)
         {
 
             InitOcr();
             _captureManager = captureManager;
+            _inputController = inputController ?? new Win32InputController();
         }
 
         private void InitOcr()
         {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            string startupPath = AppDomain.CurrentDomain.BaseDirectory;
-            string directoryPath = startupPath + "inference\\PP-OCRv5_mobile_det_infer";
-            string directoryPath2 = startupPath + "inference\\ch_ppocr_mobile_v2.0_cls_infer";
-            //string directoryPath3 = startupPath + "inference\\EqAndMosterRec";
-            string directoryPath3 = startupPath + "inference\\PP-OCRv5_mobile_rec_infer";
-            //
-            //string labelPath = startupPath + "inference\\EqMonster_dict.txt";
-            string labelPath = "";
-            // string labelPath = startupPath + "inference\\ppocrv5_dict.txt";
+            myocrService = PaddleOcrFactory.CreateDefaultChineseV5();
+        }
 
-            myocrService = new PaddleOcrAll(
-                new FullOcrModel(
-                    DetectionModel.FromDirectory(directoryPath, ModelVersion.V5),
-                    ClassificationModel.FromDirectory(directoryPath2),
-                    RecognizationModel.FromDirectory(directoryPath3, labelPath, ModelVersion.V5)),
-               (device) =>
-               {
-                   device.EnableUseGpu(500, 0);
-                   var a = device.UseGpu;
-               });
-            myocrService.AllowRotateDetection = false;
-            myocrService.Enable180Classification = false;
+        public void SetTargetProperties(IEnumerable<IEnumerable<string>> targetProperties)
+        {
+            _targetProperties.Clear();
+            foreach (var targetProperty in targetProperties)
+            {
+                _targetProperties.Add(targetProperty.ToList());
+            }
+        }
 
+        public void Stop()
+        {
+            _cancellationTokenSource.Cancel();
         }
 
 
@@ -121,7 +109,7 @@ namespace WinFormsApp1
 
         public string CheckProperties(string pros)
         {
-            foreach (var src in targetProperties)
+            foreach (var src in _targetProperties)
             {
                 var isMatched = CanMatchElementsFuzzy(pros, [.. src], 73.0);
                 if (!string.IsNullOrEmpty(isMatched))
@@ -259,7 +247,7 @@ namespace WinFormsApp1
 
         public void Run(nint Handle, string model = "普通", int delay = 2000)
         {
-            cancellationTokenSource = new CancellationTokenSource();
+            _cancellationTokenSource = new CancellationTokenSource();
             string last = string.Empty;
             string foundResult = string.Empty;
             InitOcr();
@@ -267,7 +255,7 @@ namespace WinFormsApp1
             {
                 try
                 {
-                    while (!cancellationTokenSource.IsCancellationRequested)
+                    while (!_cancellationTokenSource.IsCancellationRequested)
                     {
                         var current = myGetProperties();
                         last = current;
@@ -276,12 +264,12 @@ namespace WinFormsApp1
                         {
                             // 标记已找到并请求取消，避免继续模拟操作
                             foundResult = reslut;
-                            cancellationTokenSource.Cancel();
+                            _cancellationTokenSource.Cancel();
                             break;
                         }
 
-                        InputSimulator.ForceActivateWindow(Handle);
-                        if (cancellationTokenSource.IsCancellationRequested)
+                        _inputController.ForceActivateWindow(Handle);
+                        if (_cancellationTokenSource.IsCancellationRequested)
                         {
                             break;
                         }
@@ -289,16 +277,16 @@ namespace WinFormsApp1
                         // 每次按键后都检查取消，以确保能在检测到后尽快停止
                         void PressSpaceSequence()
                         {
-                            InputSimulator.KeyPress(Keys.Space);
-                            InputSimulator.Delay(150);
-                            if (cancellationTokenSource.IsCancellationRequested) return;
-                            InputSimulator.KeyPress(Keys.Space);
-                            InputSimulator.Delay(150);
-                            if (cancellationTokenSource.IsCancellationRequested) return;
-                            InputSimulator.KeyPress(Keys.Space);
-                            InputSimulator.Delay(150);
-                            if (cancellationTokenSource.IsCancellationRequested) return;
-                            InputSimulator.KeyPress(Keys.Space);
+                            _inputController.KeyPress(Keys.Space);
+                            _inputController.Delay(150);
+                            if (_cancellationTokenSource.IsCancellationRequested) return;
+                            _inputController.KeyPress(Keys.Space);
+                            _inputController.Delay(150);
+                            if (_cancellationTokenSource.IsCancellationRequested) return;
+                            _inputController.KeyPress(Keys.Space);
+                            _inputController.Delay(150);
+                            if (_cancellationTokenSource.IsCancellationRequested) return;
+                            _inputController.KeyPress(Keys.Space);
                         }
 
                         PressSpaceSequence();
@@ -306,7 +294,7 @@ namespace WinFormsApp1
                         // 使用可取消的等待，替换 Thread.Sleep
                         for (int waited = 0; waited < delay; waited += 200)
                         {
-                            if (cancellationTokenSource.IsCancellationRequested) break;
+                            if (_cancellationTokenSource.IsCancellationRequested) break;
                             Thread.Sleep(Math.Min(200, delay - waited));
                         }
                     }
@@ -320,7 +308,7 @@ namespace WinFormsApp1
                     // 保证异常不会被吞掉，记录或传递给订阅者
                     foundResult = "__ERROR__: " + ex.Message;
                 }
-            }, cancellationTokenSource.Token);
+            }, _cancellationTokenSource.Token);
 
             task.ContinueWith((t) =>
             {
@@ -335,29 +323,5 @@ namespace WinFormsApp1
             });
         }
 
-        // 引入API
-        [DllImport("user32.dll")]
-        static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
-
-        // 鼠标事件标志
-        private const uint MOUSEEVENTF_MOVE = 0x0001;
-        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
-        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
-        private const uint MOUSEEVENTF_ABSOLUTE = 0x8000; // 关键标志：使用绝对坐标
-    }
-
-    public class MatchResult
-    {
-        public bool AllMatched { get; set; }
-        public List<SingleMatch> Matches { get; set; } = new List<SingleMatch>();
-    }
-
-    public class SingleMatch
-    {
-        public string Target { get; set; }      // 要匹配的目标字符串
-        public string MatchedText { get; set; } // 实际匹配到的文本
-        public double Similarity { get; set; }  // 相似度百分比
-        public int StartIndex { get; set; }     // 在源字符串中的起始位置
-        public int Length { get; set; }         // 匹配长度
     }
 }
