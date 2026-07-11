@@ -1,0 +1,14 @@
+# Large model files - ignored due to Git LFS budget limits
+*.pdiparams
+*.pdmodel
+
+# Build outputs
+*.dll
+*.exe
+
+# Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
