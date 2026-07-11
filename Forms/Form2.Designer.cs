@@ -58,6 +58,7 @@
             textBox3 = new TextBox();
             label2 = new Label();
             button3 = new Button();
+            button8 = new Button();
             SuspendLayout();
             // 
             // button1
@@ -335,11 +336,22 @@
             button3.UseVisualStyleBackColor = true;
             button3.Click += button3_Click;
             // 
+            // button8
+            // 
+            button8.Location = new Point(716, 49);
+            button8.Name = "button8";
+            button8.Size = new Size(75, 23);
+            button8.TabIndex = 31;
+            button8.Text = "测试OCR";
+            button8.UseVisualStyleBackColor = true;
+            button8.Click += button8_Click;
+            // 
             // Form2
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(button8);
             Controls.Add(button3);
             Controls.Add(label2);
             Controls.Add(textBox3);
@@ -408,5 +420,6 @@
         private TextBox textBox3;
         private Label label2;
         private Button button3;
+        private Button button8;
     }
 }

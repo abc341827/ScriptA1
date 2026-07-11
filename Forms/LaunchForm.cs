@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -8,12 +9,14 @@ namespace WinFormsApp1
 {
     public class LaunchForm : Form
     {
+        private readonly IServiceProvider _serviceProvider;
         private Button btnForm1;
         private Button btnForm2;
         private Label label1;
 
-        public LaunchForm()
+        public LaunchForm(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             InitializeComponent();
         }
 
@@ -74,7 +77,7 @@ namespace WinFormsApp1
         {
             try
             {
-                var f1 = new Form1();
+                var f1 = _serviceProvider.GetRequiredService<Form1>();
                 // 当被启动窗体关闭后也关闭启动窗体
                 f1.FormClosed += (s, args) => this.Close();
                 this.Hide();
@@ -90,7 +93,7 @@ namespace WinFormsApp1
         {
             try
             {
-                var f2 = new Form2();
+                var f2 = _serviceProvider.GetRequiredService<Form2>();
                 f2.FormClosed += (s, args) => this.Close();
                 this.Hide();
                 f2.Show();

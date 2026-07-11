@@ -1,11 +1,13 @@
 # Large model files - ignored due to Git LFS budget limits
 /inference/
+/models/
 *.pdiparams
 *.pdmodel
 
 # Build outputs
 *.dll
 *.exe
+/records/
 
 # Visual Studio
 .vs/

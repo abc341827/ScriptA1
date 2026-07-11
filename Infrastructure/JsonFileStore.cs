@@ -4,6 +4,11 @@ namespace WinFormsApp1
 {
     public static class JsonFileStore
     {
+        private static readonly JsonSerializerOptions LoadOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         public static T? Load<T>(string filePath)
         {
             if (!File.Exists(filePath))
@@ -12,7 +17,7 @@ namespace WinFormsApp1
             }
 
             var json = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<T>(json);
+            return JsonSerializer.Deserialize<T>(json, LoadOptions);
         }
 
         public static void Save<T>(string filePath, T value, bool writeIndented = false)

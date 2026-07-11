@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Sdcb.PaddleInference;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -75,7 +76,21 @@ namespace WinFormsApp1
             }
 
             ApplicationConfiguration.Initialize();
-            Application.Run(new LaunchForm());
+            using var serviceProvider = ConfigureServices();
+            Application.Run(serviceProvider.GetRequiredService<LaunchForm>());
+        }
+
+        private static ServiceProvider ConfigureServices()
+        {
+            var services = new ServiceCollection();
+
+            services.AddSingleton<IRecordWriter, FileRecordWriter>();
+            services.AddTransient<IInputController, Win32InputController>();
+            services.AddTransient<LaunchForm>();
+            services.AddTransient<Form1>();
+            services.AddTransient<Form2>();
+
+            return services.BuildServiceProvider();
         }
     }
 }

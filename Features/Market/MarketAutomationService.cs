@@ -61,8 +61,7 @@ namespace WinFormsApp1
         {
             try
             {
-                myocrService = PaddleOcrFactory.CreateDefaultChineseV5(
-                    ex => MessageBox.Show($"启用 GPU 失败，回退到 CPU。错误：{ex.Message}"));
+                myocrService = PaddleOcrFactory.CreateDefaultChineseV5();
             }
             catch (Exception ex)
             {

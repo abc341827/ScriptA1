@@ -15,6 +15,7 @@ namespace WinFormsApp1
     {
         private ScreenCaptureManager _captureManager;
         private readonly IInputController _inputController;
+        private readonly IRecordWriter _recordWriter;
         private readonly List<List<string>> _targetProperties = new List<List<string>>();
         public event Action<string, string, Bitmap> ProgressChanged;
         public event Action<string> ProgressCompeleted;
@@ -42,12 +43,13 @@ namespace WinFormsApp1
         private Bitmap lastBit = null;
         private string lastText = "";
 
-        public CubeAutomationService(ScreenCaptureManager captureManager, IInputController? inputController = null)
+        public CubeAutomationService(ScreenCaptureManager captureManager, IInputController? inputController = null, IRecordWriter? recordWriter = null)
         {
 
             InitOcr();
             _captureManager = captureManager;
             _inputController = inputController ?? new Win32InputController();
+            _recordWriter = recordWriter ?? new FileRecordWriter();
         }
 
         private void InitOcr()
@@ -259,9 +261,11 @@ namespace WinFormsApp1
                     {
                         var current = myGetProperties();
                         last = current;
+                        _recordWriter.WriteLine("cube", $"模式: {model}; 识别结果: {current.Trim().Replace(Environment.NewLine, " ").Replace("\n", " ")}");
                         var reslut = CheckProperties(current);
                         if (!string.IsNullOrWhiteSpace(reslut))
                         {
+                            _recordWriter.WriteLine("cube", $"匹配成功: {reslut}");
                             // 标记已找到并请求取消，避免继续模拟操作
                             foundResult = reslut;
                             _cancellationTokenSource.Cancel();

@@ -38,11 +38,19 @@ namespace WinFormsApp1
         private int count = 1;
         private CubeAutomationService mofang;
         private ScreenCaptureManager _captureManager;
-        private readonly IInputController _inputController = new Win32InputController();
+        private readonly IInputController _inputController;
+        private readonly IRecordWriter _recordWriter;
         private bool _isSelecting = false;
 
         public Form1()
+            : this(new Win32InputController(), new FileRecordWriter())
         {
+        }
+
+        public Form1(IInputController inputController, IRecordWriter recordWriter)
+        {
+            _inputController = inputController;
+            _recordWriter = recordWriter;
             InitializeComponent();
             InitializeCaptureManager();
 
@@ -51,7 +59,7 @@ namespace WinFormsApp1
             this.FormClosed += Form1_FormClosed;
             var mf = Task.Run(async () =>
             {
-                mofang = new CubeAutomationService(_captureManager, _inputController);
+                mofang = new CubeAutomationService(_captureManager, _inputController, _recordWriter);
                 //var model = await OnlineFullModels.ChineseServerV5.DownloadAsync();
                 //mofang.myocrService = new PaddleOcrAll(model);
 

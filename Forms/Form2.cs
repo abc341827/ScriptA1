@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using OpenCvSharp.Extensions;
+using System.Runtime.InteropServices;
 using static WinFormsApp1.Win32API;
 using Point = System.Drawing.Point;
 
@@ -10,7 +11,8 @@ namespace WinFormsApp1
         private const int _richTextMaxLength = 2000;
         private ScreenCaptureManager _captureManager;
         private MarketAutomationService _marketAutomationService;
-        private readonly IInputController _inputController = new Win32InputController();
+        private readonly IInputController _inputController;
+        private readonly IRecordWriter _recordWriter;
         private List<TradeItem> tradeItems;
         private Dictionary<string, Label> _tradeItemLabels;
         private List<Tuple<string, int>> toBuy = new List<Tuple<string, int>>();
@@ -33,7 +35,14 @@ namespace WinFormsApp1
         private const int WM_HOTKEY = 0x0312;
 
         public Form2()
+            : this(new Win32InputController(), new FileRecordWriter())
         {
+        }
+
+        public Form2(IInputController inputController, IRecordWriter recordWriter)
+        {
+            _inputController = inputController;
+            _recordWriter = recordWriter;
             InitializeComponent();
             // 额外设置 MaxLength，防止文本过大
             try { this.richTextBox1.MaxLength = _richTextMaxLength; } catch { }
@@ -149,6 +158,9 @@ namespace WinFormsApp1
             {
                 if (buy.Item2 >= obj.Price)
                 {
+                    _recordWriter.WriteLine(
+                        "market",
+                        $"匹配购买目标; 道具: {item.Name}; 识别价格: {item.Price}; 目标价格上限: {buy.Item2}; 附加信息: {item.All}; 剩余/库存: {item.LowLeft}; 点击位置: X={obj.Position.X}, Y={obj.Position.Y}; 购买时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
                     _inputController.MoveMouse(obj.Position.X, obj.Position.Y, absPoint: true);
                     Thread.Sleep(150);
                     _inputController.LeftClick();
@@ -412,6 +424,71 @@ namespace WinFormsApp1
             _inputController.LeftDown();
             Thread.Sleep(int.Parse(this.textBox2.Text));
             _inputController.LeftUp();
+        }
+
+        private async void button8_Click(object sender, EventArgs e)
+        {
+            using var dialog = new OpenFileDialog
+            {
+                Title = "选择要测试识别的图片",
+                Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.webp|所有文件|*.*"
+            };
+
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            button8.Enabled = false;
+            var originalText = button8.Text;
+            button8.Text = "识别中...";
+
+            try
+            {
+                var text = await Task.Run(() => RecognizeImage(dialog.FileName));
+                ShowOcrResult(dialog.FileName, text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.ToString(), "OCR测试失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                button8.Text = originalText;
+                button8.Enabled = true;
+            }
+        }
+
+        private static string RecognizeImage(string imagePath)
+        {
+            using var bitmap = new Bitmap(imagePath);
+            using var mat = BitmapConverter.ToMat(bitmap);
+            using var ocr = PaddleOcrFactory.CreateDefaultChineseV5();
+            return ocr.Run(mat).Text;
+        }
+
+        private void ShowOcrResult(string imagePath, string text)
+        {
+            using var resultForm = new Form
+            {
+                Text = "OCR测试结果",
+                Width = 800,
+                Height = 600,
+                StartPosition = FormStartPosition.CenterParent
+            };
+
+            var textBox = new TextBox
+            {
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Both,
+                Dock = DockStyle.Fill,
+                WordWrap = false,
+                Text = $"图片: {imagePath}{Environment.NewLine}{Environment.NewLine}{text}"
+            };
+
+            resultForm.Controls.Add(textBox);
+            resultForm.ShowDialog(this);
         }
 
     }
