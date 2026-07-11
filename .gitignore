@@ -1,4 +1,5 @@
 # Large model files - ignored due to Git LFS budget limits
+/inference/
 *.pdiparams
 *.pdmodel
 
