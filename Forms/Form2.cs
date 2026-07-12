@@ -1,5 +1,5 @@
-﻿using OpenCvSharp.Extensions;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json;
 using static WinFormsApp1.Win32API;
 using Point = System.Drawing.Point;
 
@@ -13,9 +13,9 @@ namespace WinFormsApp1
         private MarketAutomationService _marketAutomationService;
         private readonly IInputController _inputController;
         private readonly IRecordWriter _recordWriter;
+        private Color _borderColor = new MarketAutomationOptions().BorderColor;
         private List<TradeItem> tradeItems;
-        private Dictionary<string, Label> _tradeItemLabels;
-        private List<Tuple<string, int>> toBuy = new List<Tuple<string, int>>();
+        private List<MarketPurchaseTarget> toBuy = new List<MarketPurchaseTarget>();
         private bool _isSelecting = false;
         private IntPtr targetWindow;
         private List<Point> points;
@@ -55,26 +55,7 @@ namespace WinFormsApp1
 
             });
 
-            _tradeItemLabels = new Dictionary<string, Label>
-            {
-                ["离子薄膜"] = this.离子薄膜,
-                ["纳米晶核"] = this.纳米晶核,
-                ["配件指南"] = this.配件指南,
-                ["加固合金"] = this.加固合金,
-                ["尖兵密钥"] = this.尖兵密钥,
-                ["工艺蓝图"] = this.工艺蓝图,
-                ["3级碳化硅晶粒"] = this.三级碳化硅晶粒,
-                ["4级碳化硅晶粒"] = this.四级碳化硅晶粒,
-                ["超导晶核"] = this.超导晶核,
-                ["源能核心"] = this.源能核心,
-                ["3级源能碎片"] = this.三级源能碎片,
-                ["配件增幅器"] = this.配件增幅器,
-                ["3级枪械增强核心"] = this.三级枪械增强核心,
-                ["3级防具增强核心"] = this.三级防具增强核心,
-                ["极光序列"] = this.极光序列,
-                ["耀斑精华"] = this.耀斑精华,
-            };
-            tradeItems = _tradeItemLabels.Keys.Select(name => new TradeItem { Name = name }).ToList();
+            tradeItems = new List<TradeItem>();
             RegisterHotkeyOrShowError(HOTKEY_ID_1, None, (uint)Keys.F5);
             // load persisted listbox items
             LoadListBoxItems();
@@ -131,36 +112,58 @@ namespace WinFormsApp1
             }
         }
 
+        private void UpdateDetectedItemRow(TradeItem item)
+        {
+            if (detectedItemsListView == null) return;
+
+            if (detectedItemsListView.InvokeRequired)
+            {
+                detectedItemsListView.Invoke(new Action(() => UpdateDetectedItemRow(item)));
+                return;
+            }
+
+            var row = detectedItemsListView.Items.Cast<ListViewItem>()
+                .FirstOrDefault(x => string.Equals(x.Text, item.Name, StringComparison.Ordinal));
+
+            if (row == null)
+            {
+                row = new ListViewItem(item.Name);
+                row.SubItems.Add(string.Empty);
+                row.SubItems.Add(string.Empty);
+                row.SubItems.Add(string.Empty);
+                detectedItemsListView.Items.Add(row);
+            }
+
+            row.SubItems[1].Text = item.Price.ToString();
+            row.SubItems[2].Text = item.All ?? string.Empty;
+            row.SubItems[3].Text = item.LowLeft ?? string.Empty;
+            row.Tag = item;
+        }
+
         private void MarketAutomationService_ProgressChanged(TradeItem obj)
         {
             var item = tradeItems.FirstOrDefault(x => x.Name == obj.Name);
-            if (item != null)
+            if (item == null)
             {
-                item.Price = obj.Price;
-                item.All = obj.All;
-                item.LowLeft = obj.LowLeft;
-                item.Rect = obj.Rect;
-                AppendLog("找到" + item.Name + "啦!");
+                item = new TradeItem { Name = obj.Name };
+                tradeItems.Add(item);
             }
-            else
-            {
-                return;
-            }
-            if (_tradeItemLabels.TryGetValue(item.Name, out var label))
-            {
-                label.Invoke(() =>
-                {
-                    label.Text = $"{item.Name} 价格:{item.Price}";
-                });
-            }
-            var buy = this.toBuy.FirstOrDefault(x => x.Item1 == obj.Name);
+
+            item.Price = obj.Price;
+            item.All = obj.All;
+            item.LowLeft = obj.LowLeft;
+            item.Rect = obj.Rect;
+            AppendLog($"识别到: {item.Name} 价格:{item.Price}");
+            UpdateDetectedItemRow(item);
+
+            var buy = this.toBuy.FirstOrDefault(x => x.Name == obj.Name);
             if (buy != null)
             {
-                if (buy.Item2 >= obj.Price)
+                if (buy.MaxPrice >= obj.Price)
                 {
                     _recordWriter.WriteLine(
                         "market",
-                        $"匹配购买目标; 道具: {item.Name}; 识别价格: {item.Price}; 目标价格上限: {buy.Item2}; 附加信息: {item.All}; 剩余/库存: {item.LowLeft}; 点击位置: X={obj.Position.X}, Y={obj.Position.Y}; 购买时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
+                        $"匹配购买目标; 名称: {item.Name}; 识别价格: {item.Price}; 目标价格上限: {buy.MaxPrice}; 最低价数量: {item.All}; 剩余数量: {item.LowLeft}; 点击位置: X={obj.Position.X}, Y={obj.Position.Y}; 购买时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}");
                     _inputController.MoveMouse(obj.Position.X, obj.Position.Y, absPoint: true);
                     Thread.Sleep(150);
                     _inputController.LeftClick();
@@ -172,12 +175,12 @@ namespace WinFormsApp1
                     _inputController.MoveMouse(this.points[2].X, this.points[2].Y, absPoint: true);
                     Thread.Sleep(150);
                     _inputController.LeftClick();
-                    AppendLog("买！" + buy.Item1);
+                    AppendLog("买！" + buy.Name);
                     Thread.Sleep(2000);
                 }
                 else
                 {
-                    AppendLog("不买！" + buy.Item1 + obj.Price + "太贵啦!");
+                    AppendLog("不买！" + buy.Name + obj.Price + "太贵啦!");
                 }
 
             }
@@ -191,12 +194,12 @@ namespace WinFormsApp1
         private void button1_Click(object sender, EventArgs e)
         {
             this.toBuy.Clear();
-            foreach (string item in listBox1.Items)
+            foreach (ListViewItem item in purchaseTargetsListView.Items)
             {
-                var p = item.Split('|');
-                if (p.Length == 2)
+                var target = item.Tag as MarketPurchaseTarget;
+                if (target != null)
                 {
-                    this.toBuy.Add(new Tuple<string, int>(p[0], int.Parse(p[1])));
+                    this.toBuy.Add(target);
                 }
             }
             var num = 1;
@@ -359,22 +362,44 @@ namespace WinFormsApp1
         {
             _captureManager.ShowSelector(action1: (a) =>
             {
-                _marketAutomationService.SetBorderColor(GetColorAt(a.X, a.Y));
+                var borderColor = GetColorAt(a.X, a.Y);
+                _borderColor = borderColor;
+                _marketAutomationService.SetBorderColor(borderColor);
+                AppendLog($"已设置边框色值: R={borderColor.R}, G={borderColor.G}, B={borderColor.B}");
             });
 
         }
 
         private void button6_Click(object sender, EventArgs e)
         {
-            var text = this.textBox1.Text;
-            this.listBox1.Items.Add(text);
+            if (!int.TryParse(this.textBox4.Text, out var maxPrice) || maxPrice <= 0)
+            {
+                MessageBox.Show("请输入有效的最高价格。", "购买目标", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var target = new MarketPurchaseTarget
+            {
+                Name = this.textBox1.Text.Trim(),
+                MaxPrice = maxPrice
+            };
+
+            if (string.IsNullOrWhiteSpace(target.Name))
+            {
+                MessageBox.Show("请输入道具名称。", "购买目标", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            AddOrUpdatePurchaseTargetRow(target);
             SaveListBoxItems();
         }
 
         private void button7_Click(object sender, EventArgs e)
         {
-
-            this.listBox1.Items.RemoveAt(this.listBox1.SelectedIndex);
+            foreach (ListViewItem item in purchaseTargetsListView.SelectedItems)
+            {
+                purchaseTargetsListView.Items.Remove(item);
+            }
             SaveListBoxItems();
         }
 
@@ -382,10 +407,9 @@ namespace WinFormsApp1
         {
             try
             {
-                var list = JsonFileStore.Load<List<string>>(AppPaths.MarketListBoxItemsFile);
-                if (list == null) return;
-                this.listBox1.Items.Clear();
-                foreach (var it in list) this.listBox1.Items.Add(it);
+                var list = LoadPurchaseTargets();
+                this.purchaseTargetsListView.Items.Clear();
+                foreach (var it in list) AddOrUpdatePurchaseTargetRow(it);
             }
             catch (Exception ex)
             {
@@ -398,14 +422,87 @@ namespace WinFormsApp1
         {
             try
             {
-                var list = new List<string>();
-                foreach (var it in this.listBox1.Items) list.Add(it?.ToString() ?? string.Empty);
-                JsonFileStore.Save(AppPaths.MarketListBoxItemsFile, list);
+                JsonFileStore.Save(AppPaths.MarketListBoxItemsFile, ParsePurchaseTargetsFromListView(), writeIndented: true);
             }
             catch (Exception ex)
             {
                 try { AppendLog($"SaveListBoxItems error: {ex.Message}"); } catch { }
             }
+        }
+
+        private List<MarketPurchaseTarget> ParsePurchaseTargetsFromListView()
+        {
+            var targets = new List<MarketPurchaseTarget>();
+            foreach (ListViewItem item in this.purchaseTargetsListView.Items)
+            {
+                if (item.Tag is MarketPurchaseTarget target)
+                {
+                    targets.Add(target);
+                }
+            }
+
+            return targets;
+        }
+
+        private void AddOrUpdatePurchaseTargetRow(MarketPurchaseTarget target)
+        {
+            var row = purchaseTargetsListView.Items.Cast<ListViewItem>()
+                .FirstOrDefault(x => string.Equals(x.Text, target.Name, StringComparison.Ordinal));
+
+            if (row == null)
+            {
+                row = new ListViewItem(target.Name);
+                row.SubItems.Add(string.Empty);
+                purchaseTargetsListView.Items.Add(row);
+            }
+
+            row.SubItems[1].Text = target.MaxPrice.ToString();
+            row.Tag = target;
+        }
+
+        private static MarketPurchaseTarget? ParsePurchaseTarget(string text)
+        {
+            var parts = text.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2 || !int.TryParse(parts[1], out var maxPrice))
+            {
+                return null;
+            }
+
+            return new MarketPurchaseTarget
+            {
+                Name = parts[0],
+                MaxPrice = maxPrice
+            };
+        }
+
+        private static List<MarketPurchaseTarget> LoadPurchaseTargets()
+        {
+            if (!File.Exists(AppPaths.MarketListBoxItemsFile))
+            {
+                return new List<MarketPurchaseTarget>();
+            }
+
+            var json = File.ReadAllText(AppPaths.MarketListBoxItemsFile);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            try
+            {
+                var targets = JsonSerializer.Deserialize<List<MarketPurchaseTarget>>(json, options);
+                if (targets != null)
+                {
+                    return targets.Where(x => !string.IsNullOrWhiteSpace(x.Name)).ToList();
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            var legacyItems = JsonSerializer.Deserialize<List<string>>(json, options) ?? new List<string>();
+            return legacyItems
+                .Select(ParsePurchaseTarget)
+                .Where(x => x != null)
+                .Cast<MarketPurchaseTarget>()
+                .ToList();
         }
 
         private void textBox2_KeyPress(object sender, KeyPressEventArgs e)
@@ -424,71 +521,6 @@ namespace WinFormsApp1
             _inputController.LeftDown();
             Thread.Sleep(int.Parse(this.textBox2.Text));
             _inputController.LeftUp();
-        }
-
-        private async void button8_Click(object sender, EventArgs e)
-        {
-            using var dialog = new OpenFileDialog
-            {
-                Title = "选择要测试识别的图片",
-                Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.webp|所有文件|*.*"
-            };
-
-            if (dialog.ShowDialog(this) != DialogResult.OK)
-            {
-                return;
-            }
-
-            button8.Enabled = false;
-            var originalText = button8.Text;
-            button8.Text = "识别中...";
-
-            try
-            {
-                var text = await Task.Run(() => RecognizeImage(dialog.FileName));
-                ShowOcrResult(dialog.FileName, text);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, ex.ToString(), "OCR测试失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                button8.Text = originalText;
-                button8.Enabled = true;
-            }
-        }
-
-        private static string RecognizeImage(string imagePath)
-        {
-            using var bitmap = new Bitmap(imagePath);
-            using var mat = BitmapConverter.ToMat(bitmap);
-            using var ocr = PaddleOcrFactory.CreateDefaultChineseV5();
-            return ocr.Run(mat).Text;
-        }
-
-        private void ShowOcrResult(string imagePath, string text)
-        {
-            using var resultForm = new Form
-            {
-                Text = "OCR测试结果",
-                Width = 800,
-                Height = 600,
-                StartPosition = FormStartPosition.CenterParent
-            };
-
-            var textBox = new TextBox
-            {
-                Multiline = true,
-                ReadOnly = true,
-                ScrollBars = ScrollBars.Both,
-                Dock = DockStyle.Fill,
-                WordWrap = false,
-                Text = $"图片: {imagePath}{Environment.NewLine}{Environment.NewLine}{text}"
-            };
-
-            resultForm.Controls.Add(textBox);
-            resultForm.ShowDialog(this);
         }
 
     }

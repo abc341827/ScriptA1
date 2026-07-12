@@ -13,5 +13,9 @@ namespace WinFormsApp1
         public int SwipePause { get; set; } = 5;
 
         public int UpSwipeExtra { get; set; } = 1;
+
+        public int MinItemWidth { get; set; } = 40;
+
+        public int MinItemHeight { get; set; } = 20;
     }
 }

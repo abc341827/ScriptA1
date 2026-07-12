@@ -1,6 +1,5 @@
 ﻿using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using Sdcb.PaddleOCR;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -11,7 +10,7 @@ namespace WinFormsApp1
 {
     public class MarketAutomationService
     {
-        public PaddleOcrAll myocrService;
+        public IMarketOcrEngine myocrService;
         private readonly ScreenCaptureManager _captureManager;
         private readonly IInputController _inputController;
         private readonly MarketAutomationOptions _options = new MarketAutomationOptions();
@@ -33,6 +32,8 @@ namespace WinFormsApp1
             _options.BorderColor = options.BorderColor;
             _options.SwipePause = options.SwipePause;
             _options.UpSwipeExtra = options.UpSwipeExtra;
+            _options.MinItemWidth = options.MinItemWidth;
+            _options.MinItemHeight = options.MinItemHeight;
         }
 
         public void SetScrollOptions(int rollNumber, int rollSize)
@@ -61,7 +62,8 @@ namespace WinFormsApp1
         {
             try
             {
-                myocrService = PaddleOcrFactory.CreateDefaultChineseV5();
+                myocrService = OcrEngineFactory.CreateDefault(out var runtimeDescription);
+                postMessage?.Invoke($"OCR运行时: {runtimeDescription}");
             }
             catch (Exception ex)
             {
@@ -128,7 +130,9 @@ namespace WinFormsApp1
 
             using (bmp)
             {
-                var list = TradeBorderDetector.DetectBorders(bmp, _options.BorderColor);
+                var list = TradeBorderDetector.DetectBorders(bmp, _options.BorderColor)
+                    .Where(IsRecognizableItemRectangle)
+                    .ToList();
                 if (list == null || list.Count == 0) return;
 
                 foreach (var item in list)
@@ -140,12 +144,21 @@ namespace WinFormsApp1
                     if (tb == null) continue;
                     using (tb)
                     {
-                        Mat matImage = BitmapConverter.ToMat(tb);
-                        var result = myocrService.Run(matImage);
-                        var trade = CheckProperties(result);
-                        if (trade == null) continue;
-                        trade.Rect = rect;
-                        ProgressChanged?.Invoke(trade);
+                            try
+                            {
+                                using Mat matImage = BitmapConverter.ToMat(tb);
+                                if (matImage.Empty()) continue;
+
+                                var result = myocrService.Recognize(matImage);
+                                var trade = CheckProperties(result);
+                                if (trade == null) continue;
+                                trade.Rect = rect;
+                                ProgressChanged?.Invoke(trade);
+                            }
+                            catch (Exception ex)
+                            {
+                                postMessage?.Invoke($"OCR识别失败，已跳过候选框 X={rect.X}, Y={rect.Y}, W={rect.Width}, H={rect.Height}。错误: {ex.Message}");
+                            }
                     }
                 }
             }
@@ -160,7 +173,9 @@ namespace WinFormsApp1
 
                 using (bmp)
                 {
-                    var list = TradeBorderDetector.DetectBorders(bmp, _options.BorderColor);
+                    var list = TradeBorderDetector.DetectBorders(bmp, _options.BorderColor)
+                        .Where(IsRecognizableItemRectangle)
+                        .ToList();
                     if (list == null || list.Count == 0) return;
 
                     foreach (var item in list)
@@ -172,23 +187,37 @@ namespace WinFormsApp1
                         if (tb == null) continue;
                         using (tb)
                         {
-                            Mat matImage = BitmapConverter.ToMat(tb);
-                            var result = myocrService.Run(matImage);
-                            var trade = CheckProperties(result);
-                            if (trade == null) continue;
-                            trade.Rect = rect;
-                            ProgressChanged?.Invoke(trade);
+                                try
+                                {
+                                    using Mat matImage = BitmapConverter.ToMat(tb);
+                                    if (matImage.Empty()) continue;
+
+                                    var result = myocrService.Recognize(matImage);
+                                    var trade = CheckProperties(result);
+                                    if (trade == null) continue;
+                                    trade.Rect = rect;
+                                    ProgressChanged?.Invoke(trade);
+                                }
+                                catch (Exception ex)
+                                {
+                                    postMessage?.Invoke($"OCR识别失败，已跳过候选框 X={rect.X}, Y={rect.Y}, W={rect.Width}, H={rect.Height}。错误: {ex.Message}");
+                                }
                         }
                     }
                 }
             }
         }
 
-        public TradeItem? CheckProperties(PaddleOcrResult result)
+        private bool IsRecognizableItemRectangle(Rectangle rectangle)
+        {
+            return rectangle.Width >= _options.MinItemWidth && rectangle.Height >= _options.MinItemHeight;
+        }
+
+        public TradeItem? CheckProperties(IReadOnlyList<OcrTextLine> result)
         {
             try
             {
-                var res = result.Regions.ToList();
+                var res = result.ToList();
                 res.RemoveAll(x => x.Score < 0.75);
 
                 var itemName = res[0].Text;

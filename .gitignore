@@ -7,6 +7,7 @@
 # Build outputs
 *.dll
 *.exe
+/artifacts/
 /records/
 
 # Visual Studio

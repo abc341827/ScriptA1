@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Sdcb.PaddleInference;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 namespace WinFormsApp1
 {
@@ -68,7 +68,7 @@ namespace WinFormsApp1
             //    }
 
             //}
-            if (!PaddleRuntimeDeploy.ConfigureRuntime(out var runtime, out var error))
+            if (ShouldConfigurePaddleRuntime() && !PaddleRuntimeDeploy.ConfigureRuntime(out var runtime, out var error))
             {
 
                 Console.WriteLine($"警告: {error}");
@@ -78,6 +78,35 @@ namespace WinFormsApp1
             ApplicationConfiguration.Initialize();
             using var serviceProvider = ConfigureServices();
             Application.Run(serviceProvider.GetRequiredService<LaunchForm>());
+        }
+
+        private static bool ShouldConfigurePaddleRuntime()
+        {
+            var settingsPath = FindFileFromBaseDirectory("config/appsettings.json", AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(settingsPath))
+            {
+                return true;
+            }
+
+            var settings = JsonFileStore.Load<AppSettings>(settingsPath);
+            return settings?.Ocr?.Engine.Equals("Paddle", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        private static string? FindFileFromBaseDirectory(string relativePath, string baseDirectory)
+        {
+            var directory = new DirectoryInfo(baseDirectory);
+            while (directory != null)
+            {
+                var candidate = Path.Combine(directory.FullName, relativePath);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return null;
         }
 
         private static ServiceProvider ConfigureServices()

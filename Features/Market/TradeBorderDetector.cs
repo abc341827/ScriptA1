@@ -21,14 +21,14 @@ namespace WinFormsApp1
         /// <param name="minArea">Minimum connected area (in pixels) to keep a region.</param>
         /// <param name="mergeGap">Merge boxes closer than this gap (pixels).</param>
         /// <returns>List of bounding rectangles sorted top-to-bottom left-to-right.</returns>
-        public static List<Rectangle> DetectBorders(Bitmap bmp, Color targetColor, int tolerance = 20, int minArea = 20, int mergeGap = 3)
+        public static List<Rectangle> DetectBorders(Bitmap bmp, Color targetColor, int tolerance = 20, int minArea = 20, int mergeGap = 3, int dilationRadius = 0, int minWidth = 3, int minHeight = 3)
         {
             if (bmp == null) throw new ArgumentNullException(nameof(bmp));
 
             int w = bmp.Width;
             int h = bmp.Height;
             var visited = new bool[w, h];
-            var mask = new bool[w, h];
+            var sourceMask = new bool[w, h];
             int tol2 = tolerance * tolerance;
 
             // Build mask where pixels close to targetColor are true
@@ -41,9 +41,11 @@ namespace WinFormsApp1
                     int dg = c.G - targetColor.G;
                     int db = c.B - targetColor.B;
                     int d2 = dr * dr + dg * dg + db * db;
-                    mask[x, y] = d2 <= tol2;
+                    sourceMask[x, y] = d2 <= tol2;
                 }
             }
+
+            var mask = dilationRadius > 0 ? DilateMask(sourceMask, w, h, dilationRadius) : sourceMask;
 
             var boxes = new List<Rectangle>();
 
@@ -94,7 +96,7 @@ namespace WinFormsApp1
 
                     int width = maxX - minX + 1;
                     int height = maxY - minY + 1;
-                    if (area >= minArea && width > 2 && height > 2)
+                    if (area >= minArea && width >= minWidth && height >= minHeight)
                     {
                         boxes.Add(new Rectangle(minX, minY, width, height));
                     }
@@ -107,6 +109,33 @@ namespace WinFormsApp1
             // sort top-to-bottom then left-to-right
             boxes = boxes.OrderBy(r => r.Top).ThenBy(r => r.Left).ToList();
             return boxes;
+        }
+
+        private static bool[,] DilateMask(bool[,] sourceMask, int width, int height, int radius)
+        {
+            var dilated = new bool[width, height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (!sourceMask[x, y]) continue;
+
+                    int left = Math.Max(0, x - radius);
+                    int right = Math.Min(width - 1, x + radius);
+                    int top = Math.Max(0, y - radius);
+                    int bottom = Math.Min(height - 1, y + radius);
+
+                    for (int yy = top; yy <= bottom; yy++)
+                    {
+                        for (int xx = left; xx <= right; xx++)
+                        {
+                            dilated[xx, yy] = true;
+                        }
+                    }
+                }
+            }
+
+            return dilated;
         }
 
         private static List<Rectangle> MergeNearbyRects(List<Rectangle> rects, int gap)

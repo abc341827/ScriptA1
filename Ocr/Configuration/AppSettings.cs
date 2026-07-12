@@ -7,6 +7,10 @@ namespace WinFormsApp1
 
     public class OcrSettings
     {
+        public string Engine { get; set; } = "OnnxDirectML";
+
         public string DefaultProfile { get; set; } = "models/paddleocr-v6-small/ocr-profile.json";
+
+        public string OnnxModelRoot { get; set; } = "models/paddleocr-v6-small-onnx";
     }
 }
