@@ -14,6 +14,7 @@ namespace WinFormsApp1
         private readonly ScreenCaptureManager _captureManager;
         private readonly IInputController _inputController;
         private readonly MarketAutomationOptions _options = new MarketAutomationOptions();
+        private string _ocrRuntimeDescription = string.Empty;
         public event Action<TradeItem> ProgressChanged;
         public event Action<string> postMessage;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
@@ -63,7 +64,7 @@ namespace WinFormsApp1
             try
             {
                 myocrService = OcrEngineFactory.CreateDefault(out var runtimeDescription);
-                postMessage?.Invoke($"OCR运行时: {runtimeDescription}");
+                _ocrRuntimeDescription = runtimeDescription;
             }
             catch (Exception ex)
             {
@@ -76,6 +77,11 @@ namespace WinFormsApp1
         public void Run()
         {
             _cancellationTokenSource = new CancellationTokenSource();
+            if (!string.IsNullOrWhiteSpace(_ocrRuntimeDescription))
+            {
+                postMessage?.Invoke($"OCR运行时: {_ocrRuntimeDescription}");
+            }
+
             var task = new Task(() =>
             {
                 int loopCounter = 0;

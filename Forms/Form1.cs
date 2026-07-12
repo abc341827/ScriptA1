@@ -2,7 +2,6 @@ using NAudio.MediaFoundation;
 using OpenCvSharp.Flann;
 using System.Runtime.InteropServices;
 using System.Text;
-using YamlDotNet.Core.Tokens;
 
 namespace WinFormsApp1
 {
@@ -60,8 +59,6 @@ namespace WinFormsApp1
             var mf = Task.Run(async () =>
             {
                 mofang = new CubeAutomationService(_captureManager, _inputController, _recordWriter);
-                //var model = await OnlineFullModels.ChineseServerV5.DownloadAsync();
-                //mofang.myocrService = new PaddleOcrAll(model);
 
                 mofang.ProgressChanged += Mofang_ProgressChanged;
                 mofang.ProgressCompeleted += Mofang_ProgressCompeleted;

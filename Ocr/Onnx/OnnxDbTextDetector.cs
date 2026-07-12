@@ -12,9 +12,9 @@ namespace WinFormsApp1
         private const float BoxThreshold = 0.45f;
         private readonly InferenceSession _session;
 
-        public OnnxDbTextDetector(string modelPath, out string provider)
+        public OnnxDbTextDetector(string modelPath, int deviceId, bool useDirectMl, out string provider)
         {
-            _session = OnnxOcrSessionFactory.CreateSession(modelPath, out provider);
+            _session = OnnxOcrSessionFactory.CreateSession(modelPath, deviceId, useDirectMl, out provider);
         }
 
         public IReadOnlyList<OnnxDetectedBox> Detect(Mat source)

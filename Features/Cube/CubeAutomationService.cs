@@ -3,7 +3,6 @@ using NAudio.CoreAudioApi;
 using NAudio.Utils;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
-using Sdcb.PaddleOCR;
 
 using System.Diagnostics;
 using System.Media;
@@ -19,7 +18,7 @@ namespace WinFormsApp1
         private readonly List<List<string>> _targetProperties = new List<List<string>>();
         public event Action<string, string, Bitmap> ProgressChanged;
         public event Action<string> ProgressCompeleted;
-        public PaddleOcrAll myocrService;
+        public IMarketOcrEngine myocrService;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         public static readonly List<string> AllProperties = new List<string>
         {
@@ -54,7 +53,7 @@ namespace WinFormsApp1
 
         private void InitOcr()
         {
-            myocrService = PaddleOcrFactory.CreateDefaultChineseV5();
+            myocrService = OcrEngineFactory.CreateDefault(out _);
         }
 
         public void SetTargetProperties(IEnumerable<IEnumerable<string>> targetProperties)
@@ -78,7 +77,7 @@ namespace WinFormsApp1
             Mat matImage = BitmapConverter.ToMat(bmp);
             //using var bmp = DirectXWindowCapture.CaptureGameWindow(Handle, rect);
             //bmp.Save("C:\\Users\\liminghan\\Pictures\\Screenshots\\test.png", ImageFormat.Png);
-            var text = myocrService.Run(matImage).Text;
+            var text = RecognizeText(matImage);
             ProgressChanged.Invoke(text, lastText, bmp);
             lastText = text;
             lastBit = bmp;
@@ -91,7 +90,7 @@ namespace WinFormsApp1
             {
                 try
                 {
-                    var a = myocrService.Run(bitmap).Text;
+                    var a = RecognizeText(bitmap);
                 }
                 catch (Exception ex)
                 {
@@ -106,6 +105,11 @@ namespace WinFormsApp1
             //using var bmp = DirectXWindowCapture.CaptureGameWindow(Handle, rect);
             //bmp.Save("C:\\Users\\liminghan\\Pictures\\Screenshots\\test.png", ImageFormat.Png);
 
+        }
+
+        private string RecognizeText(Mat image)
+        {
+            return string.Join(Environment.NewLine, myocrService.Recognize(image).Select(x => x.Text));
         }
 
 

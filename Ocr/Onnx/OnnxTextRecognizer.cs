@@ -11,9 +11,9 @@ namespace WinFormsApp1
         private readonly InferenceSession _session;
         private readonly string[] _characters;
 
-        public OnnxTextRecognizer(string modelPath, string dictionaryPath, out string provider)
+        public OnnxTextRecognizer(string modelPath, string dictionaryPath, int deviceId, bool useDirectMl, out string provider)
         {
-            _session = OnnxOcrSessionFactory.CreateSession(modelPath, out provider);
+            _session = OnnxOcrSessionFactory.CreateSession(modelPath, deviceId, useDirectMl, out provider);
             _characters = LoadCharacters(dictionaryPath);
         }
 

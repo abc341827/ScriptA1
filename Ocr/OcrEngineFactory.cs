@@ -10,30 +10,25 @@ namespace WinFormsApp1
             var settings = LoadSettings();
             var engine = settings?.Ocr?.Engine ?? "OnnxDirectML";
 
-            if (engine.Equals("OnnxDirectML", StringComparison.OrdinalIgnoreCase) ||
-                engine.Equals("Onnx", StringComparison.OrdinalIgnoreCase))
+            var useDirectMl = engine.Equals("OnnxDirectML", StringComparison.OrdinalIgnoreCase) ||
+                engine.Equals("Onnx", StringComparison.OrdinalIgnoreCase);
+            if (!useDirectMl && !engine.Equals("OnnxCpu", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    var modelRoot = FindDirectoryFromBaseDirectory(
-                        settings?.Ocr?.OnnxModelRoot ?? DefaultOnnxModelRoot,
-                        AppContext.BaseDirectory);
-                    if (!string.IsNullOrWhiteSpace(modelRoot))
-                    {
-                        var onnx = new OnnxMarketOcrEngine(modelRoot, out var providers);
-                        runtimeDescription = $"ONNX Runtime ({providers})";
-                        return onnx;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    runtimeDescription = $"ONNX 初始化失败，回退 Paddle：{ex.Message}";
-                    return new PaddleMarketOcrEngine(PaddleOcrFactory.CreateDefaultChineseV5());
-                }
+                throw new InvalidOperationException($"Unsupported OCR engine '{engine}'. Supported values: OnnxDirectML, OnnxCpu.");
             }
 
-            runtimeDescription = "Paddle";
-            return new PaddleMarketOcrEngine(PaddleOcrFactory.CreateDefaultChineseV5());
+            var modelRoot = FindDirectoryFromBaseDirectory(
+                settings?.Ocr?.OnnxModelRoot ?? DefaultOnnxModelRoot,
+                AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(modelRoot))
+            {
+                throw new DirectoryNotFoundException($"ONNX OCR model directory not found: {settings?.Ocr?.OnnxModelRoot ?? DefaultOnnxModelRoot}");
+            }
+
+            var deviceId = Math.Max(0, settings?.Ocr?.DirectMlDeviceId ?? 0);
+            var onnx = new OnnxMarketOcrEngine(modelRoot, deviceId, useDirectMl, out var providers);
+            runtimeDescription = $"ONNX Runtime ({providers})";
+            return onnx;
         }
 
         private static AppSettings? LoadSettings()
